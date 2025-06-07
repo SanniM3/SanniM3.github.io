@@ -1,0 +1,51 @@
+body {
+    margin: 0;
+    padding: 0;
+    background: url('images/background.jpg') no-repeat center center fixed;
+    background-size: cover;
+    font-family: 'Courier New', monospace;
+}
+
+.overlay {
+    background-color: rgba(0, 0, 0, 0.6);
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.content {
+    text-align: center;
+    color: #fff;
+    padding: 20px;
+    backdrop-filter: blur(5px);
+    border-radius: 12px;
+}
+
+.profile-pic {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    border: 3px solid white;
+    object-fit: cover;
+    margin-bottom: 20px;
+}
+
+#typewriter {
+    font-size: 1.2em;
+    white-space: nowrap;
+    overflow: hidden;
+    border-right: 2px solid white;
+    width: 0;
+    animation: typing 3s steps(30, end) forwards, blink 0.75s step-end infinite;
+    margin-top: 10px;
+}
+
+@keyframes typing {
+    from { width: 0 }
+    to { width: 21ch } /* Adjust based on your text length */
+}
+
+@keyframes blink {
+    50% { border-color: transparent }
+}
