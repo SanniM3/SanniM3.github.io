@@ -1,67 +1,13 @@
+/* ---------- Global Styles ---------- */
 body {
-    margin: 0;
-    padding: 0;
-    background: url('images/background.jpg') no-repeat center center fixed;
-    background-size: cover;
-    font-family: 'Courier New', monospace;
+  margin: 0;
+  padding: 0;
+  background: url('images/background.jpg') no-repeat center center fixed;
+  background-size: cover;
+  font-family: 'Courier New', monospace;
 }
 
-.overlay {
-    background-color: rgba(0, 0, 0, 0.6);
-    height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.content {
-    text-align: center;
-    color: #fff;
-    padding: 20px;
-    backdrop-filter: blur(5px);
-    border-radius: 12px;
-}
-
-.profile-pic {
-    width: 140px;
-    height: 140px;
-    border-radius: 50%;
-    border: 3px solid white;
-    object-fit: cover;
-    margin-bottom: 20px;
-}
-
-/* #typewriter {
-    font-size: 1.2em;
-    white-space: nowrap;
-    overflow: hidden;
-    border-right: 2px solid white;
-    width: 0;
-    animation: typing 3s steps(30, end) forwards, blink 0.75s step-end infinite;
-    margin-top: 10px;
-} */
-
-#typewriter {
-  font-size: 1.2em;
-  margin-top: 10px;
-  white-space: normal;
-  overflow: visible;
-  border: none;
-  width: auto;
-  animation: none;
-}
-
-
-/* @keyframes typing {
-    from { width: 0 }
-    to { width: 21ch } 
-} */
-
-@keyframes blink {
-    50% { border-color: transparent }
-}
-
-/* Navigation Bar */
+/* ---------- Navigation Bar ---------- */
 header {
   position: absolute;
   top: 20px;
@@ -72,6 +18,8 @@ nav ul {
   list-style: none;
   display: flex;
   gap: 20px;
+  margin: 0;
+  padding: 0;
 }
 
 nav ul li a {
@@ -85,19 +33,45 @@ nav ul li a:hover {
   text-decoration: underline;
 }
 
-/* Introduction paragraph */
-.intro {
-  max-width: 500px;
-  margin: 10px auto 20px;
-  font-size: 1em;
+/* ---------- Overlay Section ---------- */
+.overlay {
+  background-color: rgba(0, 0, 0, 0.4); 
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
 }
 
-/* Social media icons */
+/* ---------- Two-Column Container ---------- */
+.container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 50px;
+  color: white;
+  max-width: 1000px;
+  width: 100%;
+}
+
+/* Left: Image + Social Icons */
+.left-column {
+  text-align: center;
+}
+
+.profile-pic {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  border: 3px solid white;
+  object-fit: cover;
+  margin-bottom: 15px;
+}
+
 .social-icons {
   display: flex;
   justify-content: center;
   gap: 20px;
-  margin-bottom: 20px;
 }
 
 .social-icons a {
@@ -108,4 +82,36 @@ nav ul li a:hover {
 
 .social-icons a:hover {
   transform: scale(1.2);
+}
+
+/* Right: Intro Text */
+.right-column {
+  max-width: 500px;
+}
+
+.right-column h2 {
+  margin-top: 0;
+  font-size: 1.8em;
+}
+
+.intro {
+  font-size: 1em;
+  line-height: 1.5em;
+  white-space: normal;
+}
+
+#typewriter {
+  display: none; 
+}
+
+/* ---------- Responsive Design ---------- */
+@media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .right-column {
+    max-width: 90%;
+  }
 }
