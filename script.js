@@ -1,4 +1,4 @@
 document.addEventListener("DOMContentLoaded", () => {
     const el = document.getElementById("typewriter");
-    el.textContent = "Still working on this...";
+    el.textContent = "I'm Mardhiyah, an AI research engineer focused on building responsible and interpretable machine learning systems. My work spans multilingual reasoning, multimodal learning, model interpretability, and the design of agentic systems. I’ve worked across speech, language, and vision domains, with a growing emphasis on aligning AI with human values.";
 });
