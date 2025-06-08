@@ -31,7 +31,7 @@ body {
     margin-bottom: 20px;
 }
 
-#typewriter {
+/* #typewriter {
     font-size: 1.2em;
     white-space: nowrap;
     overflow: hidden;
@@ -39,7 +39,18 @@ body {
     width: 0;
     animation: typing 3s steps(30, end) forwards, blink 0.75s step-end infinite;
     margin-top: 10px;
+} */
+
+#typewriter {
+  font-size: 1.2em;
+  margin-top: 10px;
+  white-space: normal;
+  overflow: visible;
+  border: none;
+  width: auto;
+  animation: none;
 }
+
 
 @keyframes typing {
     from { width: 0 }
