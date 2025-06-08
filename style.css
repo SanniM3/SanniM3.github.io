@@ -86,8 +86,11 @@ nav ul li a:hover {
 
 /* Right: Intro Text */
 .right-column {
-  max-width: 500px;
+  flex-grow: 1;
+  text-align: left;
+  max-width: 1000px;
 }
+
 
 .right-column h2 {
   margin-top: 0;
