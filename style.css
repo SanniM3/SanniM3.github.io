@@ -52,10 +52,10 @@ body {
 }
 
 
-@keyframes typing {
+/* @keyframes typing {
     from { width: 0 }
     to { width: 21ch } 
-}
+} */
 
 @keyframes blink {
     50% { border-color: transparent }
