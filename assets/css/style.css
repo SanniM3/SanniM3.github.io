@@ -1880,3 +1880,22 @@ textarea.form-input::-webkit-resizer { display: none; }
   .timeline-text { max-width: 700px; }
 
 }
+
+.skill-category {
+  margin-bottom: 25px;
+}
+
+.skill-category-title {
+  font-size: var(--fs-4);
+  font-weight: var(--fw-600);
+  color: var(--orange-yellow-crayola);
+  margin-bottom: 10px;
+}
+
+.skill-items {
+  color: var(--light-gray);
+  font-size: var(--fs-6);
+  font-weight: var(--fw-300);
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
