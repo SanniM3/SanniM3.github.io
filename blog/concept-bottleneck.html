@@ -21,160 +21,159 @@
 </head>
 <body>
 
-  <main style="max-width: 1100px; margin: 0 auto; padding: 24px;">
-    <!-- Top nav/back -->
-    <nav class="navbar" style="margin-bottom: 12px;">
-      <ul class="navbar-list">
-        <li class="navbar-item">
-          <a class="navbar-link" href="../index.html" style="text-decoration: none;">← Back to Home</a>
-        </li>
-        <li class="navbar-item">
-          <a class="navbar-link" href="../index.html#blog" style="text-decoration: none;">Blog</a>
-        </li>
-      </ul>
-    </nav>
+  <main>
+    <div class="main-content">
 
-    <!-- Banner -->
-    <figure class="blog-banner-box" style="margin: 0 0 16px;">
-      <!-- Replace with your banner if you have one -->
-      <img src="../assets/images/cbm.png" alt="Concept Bottleneck Models" loading="lazy" style="width: 100%; height: 260px; object-fit: cover; border-radius: 16px;" />
-    </figure>
-
-    <!-- Post header -->
-    <header style="margin: 8px 0 18px;">
-      <div class="blog-meta" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-        <p class="blog-category">AI Interpretability</p>
-        <span class="dot"></span>
-        <time datetime="2025-08-19">Aug 19, 2025</time>
-      </div>
-      <h1 class="h2 article-title" style="margin-top: 8px;">
-        From Black Box to Glass Box: The Role of Concept Bottleneck Models in AI Interpretability
-      </h1>
-    </header>
-
-    <!-- Post content -->
-    <div class="blog-post" style="line-height: 1.75;">
-      <section>
-        <h2>Introduction</h2>
-        <p>
-          Artificial Intelligence (AI) has become deeply embedded in various sectors, including healthcare, finance, and autonomous systems. Despite their impressive capabilities, many AI models operate as “black boxes,” making decisions without providing insight into their internal reasoning processes. This opacity raises concerns about trust, accountability, and the ethical deployment of AI systems. To address these challenges, researchers have developed Concept Bottleneck Models (CBMs), which aim to transform AI from an opaque “black box” into a transparent “glass box” by incorporating human-understandable concepts into the decision-making process.
-        </p>
-      </section>
-
-      <section>
-        <h2>Understanding Concept Bottleneck Models</h2>
-        <p>
-          Traditional AI models, particularly deep neural networks, are renowned for their ability to learn complex patterns from data. However, their intricate architectures often result in a lack of transparency, making it difficult to understand how specific inputs lead to particular outputs. This “black box” nature poses significant challenges, especially in critical applications where understanding the rationale behind a decision is essential for trust and accountability.
-        </p>
-        <p>
-          Concept Bottleneck Models address this issue by introducing an intermediate layer—the “bottleneck”—composed of human-understandable concepts. The model operates in two stages: first, it predicts these concepts from the input data; second, it uses the predicted concepts to make the final decision. This architecture allows for a more transparent decision-making process, as each prediction is explicitly linked to comprehensible concepts.
-        </p>
-      </section>
-
-      <section>
-        <h2>Advantages of CBMs</h2>
-
-        <h3>Enhanced Interpretability</h3>
-        <p>
-          By mapping inputs to explicit concepts, CBMs make the decision-making process more transparent. For instance, in medical diagnostics, a CBM can identify clinical features from patient data and use them to diagnose a condition, providing clinicians with a clear rationale for the diagnosis. This explicit mapping enhances trust and facilitates the validation of AI decisions in sensitive applications.
-        </p>
-
-        <h3>Facilitating Interventions</h3>
-        <p>
-          CBMs allow users to intervene by correcting mispredicted concepts, thereby improving the model’s performance and trustworthiness. For example, if a model misclassifies an image due to an incorrect concept prediction, a user can adjust the concept, leading to a corrected final prediction. This intervention capability is particularly valuable in dynamic environments where adaptability is essential.
-        </p>
-      </section>
-
-      <section>
-        <h2>Challenges and Limitations</h2>
-
-        <h3>Concept Leakage</h3>
-        <p>
-          One significant issue is “concept leakage,” where irrelevant information influences concept activations, potentially compromising interpretability. This occurs when the model inadvertently learns to associate non-conceptual features with certain concepts, leading to spurious correlations. Addressing this requires careful design and validation of the concept set to ensure they are both relevant and accurately captured by the model.
-        </p>
-
-        <h3>Performance Trade-offs</h3>
-        <p>
-          Balancing accuracy and interpretability can be challenging. In some cases, CBMs may underperform compared to traditional models, necessitating a careful evaluation of the trade-offs involved. For instance, the rigid structure of CBMs might limit their ability to capture complex patterns in data, leading to reduced predictive performance. Researchers must consider these trade-offs when designing and deploying CBMs in real-world applications.
-        </p>
-      </section>
-
-      <section>
-        <h2>Recent Advancements</h2>
-        <p>
-          Recent developments in Concept Bottleneck Models (CBMs) have focused on enhancing interpretability, adaptability, and performance across various applications. One notable advancement is the introduction of <strong>Graph Concept Bottleneck Models (Graph CBMs)</strong>, which incorporate learnable graph structures to capture relationships among concepts. This approach addresses the limitation of traditional CBMs that assume concepts are conditionally independent, thereby enhancing both performance and interpretability by modeling the dependencies between concepts <a href="#ref-graph_cbm">[1]</a>.
-        </p>
-        <p>
-          Building upon this, the <strong>Incremental Residual Concept Bottleneck Model (Res-CBM)</strong> addresses the challenge of concept completeness by employing a set of optimizable vectors to complete missing concepts. This method allows the model to learn additional features not captured by predefined concepts, improving performance without sacrificing interpretability <a href="#ref-res_cbm">[2]</a>.
-        </p>
-        <p>
-          In the realm of large language models, the <strong>Concept Bottleneck Large Language Model (CB-LLM)</strong> integrates CBMs into language models to achieve inherent interpretability in natural language processing tasks. This approach enables the transformation of traditional black-box models into interpretable frameworks, facilitating clearer understanding and debugging of language models <a href="#ref-sun2024concept">[3]</a>.
-        </p>
-        <p>
-          In computer vision, the <strong>Vision-to-Concept (V2C) tokenizer</strong> has been proposed to construct CBMs without relying on extensive human annotations. By quantizing images into relevant visual concepts, this method creates a vision-oriented concept bottleneck that is tightly coupled with multimodal models, enhancing both interpretability and classification accuracy <a href="#ref-he2025v2c">[4]</a>.
-        </p>
-        <p>
-          Addressing the challenge of distribution shifts, the <strong>Adaptive Concept Bottleneck framework</strong> has been developed to dynamically adjust concept representations during deployment. This framework adapts the concept-vector bank and prediction layer based on unlabeled data from the target domain, improving robustness and maintaining interpretability under varying conditions <a href="#ref-choi2024adaptive">[5]</a>.
-        </p>
-        <p>
-          Furthermore, the <strong>Concept Bottleneck Model with Open Vocabulary Concepts (OpenCBM)</strong> allows models to utilize any set of user-specified concepts for final predictions, even after training. This flexibility enables users to modify the concept set without retraining the model, facilitating dynamic exploration of concept correlations and enhancing practical applicability.
-        </p>
-        <p>
-          These advancements collectively contribute to the evolution of CBMs, making them more adaptable, interpretable, and applicable across diverse domains and tasks.
-        </p>
-      </section>
-
-      <section>
-        <h2>Applications of CBMs</h2>
-        <p>
-          CBMs can be used in a wide variety of applications from healthcare, to finance. In healthcare, CBMs can be used to provide transparent decision pathways, aiding clinicians in understanding model predictions and making informed decisions. For example, a CBM can predict the presence of specific clinical features from medical images and use these features to diagnose diseases, offering explanations that align with medical knowledge. In finance, however, CBMs can base decisions on clear financial indicators, ensuring transparency in lending decisions and enhancing trust among stakeholders. By linking predictions to understandable financial concepts, such as credit score components or risk factors, CBMs facilitate better decision-making and regulatory compliance.
-        </p>
-      </section>
-
-      <section>
-        <h2>Future Directions</h2>
-        <p>
-          Ongoing research aims to design more expressive and non-redundant concept sets to enhance CBM performance and applicability across various domains. Developing comprehensive and domain-specific concept sets can improve the model’s ability to capture relevant features, leading to more accurate and interpretable predictions.
-        </p>
-        <p>
-          Efforts are underway to develop models that maintain high accuracy while providing clear explanations, ensuring that interpretability does not come at the cost of performance. Techniques such as hybrid models that combine CBMs with traditional neural networks are being explored to achieve this balance.
-        </p>
-      </section>
-
-      <section>
-        <h2>Conclusion</h2>
-        <p>
-          Concept Bottleneck Models represent a significant step toward making AI systems more transparent and trustworthy. By structuring models around human-understandable concepts, CBMs have the potential to transform AI from opaque “black boxes” into transparent “glass boxes,” fostering trust and accountability in AI-driven decisions.
-        </p>
-      </section>
-
-      <hr style="margin: 28px 0;" />
-
-      <section>
-        <h2>References</h2>
-        <ol>
-          <li id="ref-graph_cbm">
-            <a href="https://openreview.net/forum?id=qPH7lAyQgV" target="_blank" rel="noopener">Graph Concept Bottleneck Models. <em>OpenReview</em>.</a>
+      <!-- Simple back nav using your navbar styling -->
+      <nav class="navbar">
+        <ul class="navbar-list">
+          <li class="navbar-item">
+            <a class="navbar-link" href="../index.html">← Back to Home</a>
           </li>
-          <li id="ref-res_cbm">
-            <a href="https://openaccess.thecvf.com/content/CVPR2024/papers/Shang_Incremental_Residual_Concept_Bottleneck_Models_CVPR_2024_paper.pdf" target="_blank" rel="noopener">Shang, J., et al. Incremental Residual Concept Bottleneck Models. <em>CVPR 2024</em>.</a>
+          <li class="navbar-item">
+            <a class="navbar-link" href="../index.html#blog">Blog</a>
           </li>
-          <li id="ref-sun2024concept">
-            <a href="https://arxiv.org/abs/2412.07992" target="_blank" rel="noopener">Sun, C.-E., Oikarinen, T., Ustun, B., &amp; Weng, T.-W. (2024). Concept Bottleneck Large Language Models. <em>arXiv:2412.07992</em>.</a>
-          </li>
-          <li id="ref-he2025v2c">
-            <a href="https://arxiv.org/abs/2501.04975" target="_blank" rel="noopener">He, H., Zhu, L., Zhang, X., Zeng, S., Chen, Q., &amp; Lu, Y. (2025). V2C-CBM: Building Concept Bottlenecks with Vision-to-Concept Tokenizer. <em>arXiv:2501.04975</em>.</a>
-          </li>
-          <li id="ref-choi2024adaptive">
-            <a href="https://arxiv.org/abs/2412.14097" target="_blank" rel="noopener">Choi, J., Raghuram, J., Li, Y., &amp; Jha, S. (2024). Adaptive Concept Bottleneck for Foundation Models Under Distribution Shifts. <em>arXiv:2412.14097</em>.</a>
-          </li>
-        </ol>
-      </section>
-    </div>
+        </ul>
+      </nav>
 
-    <!-- Bottom nav/back -->
-    <div style="margin-top: 24px;">
-      <a class="navbar-link" href="../index.html#blog" style="text-decoration: none;">← Back to Blog</a>
+      <!-- IMPORTANT: use the same article + classes + active -->
+      <article class="blog active" data-page="blog">
+
+        <!-- Title (matches your section headings styling) -->
+        <header>
+          <h2 class="h2 article-title">
+            From Black Box to Glass Box: The Role of Concept Bottleneck Models in AI Interpretability
+          </h2>
+        </header>
+
+        <!-- Banner (same class + inline size style as your index cards) -->
+        <figure class="blog-banner-box">
+          <img src="../assets/images/cbm.png"
+               alt="Concept Bottleneck Models"
+               loading="lazy"
+               style="width: 100%; height: 260px; object-fit: cover; border-radius: 16px;">
+        </figure>
+
+        <!-- Post meta -->
+        <div class="blog-meta" style="margin-top: 10px;">
+          <p class="blog-category">AI Interpretability</p>
+          <span class="dot"></span>
+          <time datetime="2025-08-19">Aug 19, 2025</time>
+        </div>
+
+        <!-- Content area reusing your blog classes so colors/spacing apply -->
+        <section class="blog-posts">
+
+          <div class="blog-content">
+
+            <h3 class="h3">Introduction</h3>
+            <p class="blog-text">
+              Artificial Intelligence (AI) has become deeply embedded in various sectors, including healthcare, finance, and autonomous systems. Despite their impressive capabilities, many AI models operate as “black boxes,” making decisions without providing insight into their internal reasoning processes. This opacity raises concerns about trust, accountability, and the ethical deployment of AI systems. To address these challenges, researchers have developed Concept Bottleneck Models (CBMs), which aim to transform AI from an opaque “black box” into a transparent “glass box” by incorporating human-understandable concepts into the decision-making process.
+            </p>
+
+            <h3 class="h3">Understanding Concept Bottleneck Models</h3>
+            <p class="blog-text">
+              Traditional AI models, particularly deep neural networks, are renowned for their ability to learn complex patterns from data. However, their intricate architectures often result in a lack of transparency, making it difficult to understand how specific inputs lead to particular outputs. This “black box” nature poses significant challenges, especially in critical applications where understanding the rationale behind a decision is essential for trust and accountability.
+            </p>
+            <p class="blog-text">
+              Concept Bottleneck Models address this issue by introducing an intermediate layer—the “bottleneck”—composed of human-understandable concepts. The model operates in two stages: first, it predicts these concepts from the input data; second, it uses the predicted concepts to make the final decision. This architecture allows for a more transparent decision-making process, as each prediction is explicitly linked to comprehensible concepts.
+            </p>
+
+            <h3 class="h3">Advantages of CBMs</h3>
+
+            <h4 class="h4">Enhanced Interpretability</h4>
+            <p class="blog-text">
+              By mapping inputs to explicit concepts, CBMs make the decision-making process more transparent. For instance, in medical diagnostics, a CBM can identify clinical features from patient data and use them to diagnose a condition, providing clinicians with a clear rationale for the diagnosis. This explicit mapping enhances trust and facilitates the validation of AI decisions in sensitive applications.
+            </p>
+
+            <h4 class="h4">Facilitating Interventions</h4>
+            <p class="blog-text">
+              CBMs allow users to intervene by correcting mispredicted concepts, thereby improving the model’s performance and trustworthiness. For example, if a model misclassifies an image due to an incorrect concept prediction, a user can adjust the concept, leading to a corrected final prediction. This intervention capability is particularly valuable in dynamic environments where adaptability is essential.
+            </p>
+
+            <h3 class="h3">Challenges and Limitations</h3>
+
+            <h4 class="h4">Concept Leakage</h4>
+            <p class="blog-text">
+              One significant issue is “concept leakage,” where irrelevant information influences concept activations, potentially compromising interpretability. This occurs when the model inadvertently learns to associate non-conceptual features with certain concepts, leading to spurious correlations. Addressing this requires careful design and validation of the concept set to ensure they are both relevant and accurately captured by the model.
+            </p>
+
+            <h4 class="h4">Performance Trade-offs</h4>
+            <p class="blog-text">
+              Balancing accuracy and interpretability can be challenging. In some cases, CBMs may underperform compared to traditional models, necessitating a careful evaluation of the trade-offs involved. For instance, the rigid structure of CBMs might limit their ability to capture complex patterns in data, leading to reduced predictive performance. Researchers must consider these trade-offs when designing and deploying CBMs in real-world applications.
+            </p>
+
+            <h3 class="h3">Recent Advancements</h3>
+            <p class="blog-text">
+              Recent developments in Concept Bottleneck Models (CBMs) have focused on enhancing interpretability, adaptability, and performance across various applications. One notable advancement is the introduction of <strong>Graph Concept Bottleneck Models (Graph CBMs)</strong>, which incorporate learnable graph structures to capture relationships among concepts. This approach addresses the limitation of traditional CBMs that assume concepts are conditionally independent, thereby enhancing both performance and interpretability by modeling the dependencies between concepts <a href="#ref-1">[1]</a>.
+            </p>
+            <p class="blog-text">
+              Building upon this, the <strong>Incremental Residual Concept Bottleneck Model (Res-CBM)</strong> addresses the challenge of concept completeness by employing a set of optimizable vectors to complete missing concepts. This method allows the model to learn additional features not captured by predefined concepts, improving performance without sacrificing interpretability <a href="#ref-2">[2]</a>.
+            </p>
+            <p class="blog-text">
+              In the realm of large language models, the <strong>Concept Bottleneck Large Language Model (CB-LLM)</strong> integrates CBMs into language models to achieve inherent interpretability in natural language processing tasks. This approach enables the transformation of traditional black-box models into interpretable frameworks, facilitating clearer understanding and debugging of language models <a href="#ref-3">[3]</a>.
+            </p>
+            <p class="blog-text">
+              In computer vision, the <strong>Vision-to-Concept (V2C) tokenizer</strong> has been proposed to construct CBMs without relying on extensive human annotations. By quantizing images into relevant visual concepts, this method creates a vision-oriented concept bottleneck that is tightly coupled with multimodal models, enhancing both interpretability and classification accuracy <a href="#ref-4">[4]</a>.
+            </p>
+            <p class="blog-text">
+              Addressing the challenge of distribution shifts, the <strong>Adaptive Concept Bottleneck framework</strong> has been developed to dynamically adjust concept representations during deployment. This framework adapts the concept-vector bank and prediction layer based on unlabeled data from the target domain, improving robustness and maintaining interpretability under varying conditions <a href="#ref-5">[5]</a>.
+            </p>
+            <p class="blog-text">
+              Furthermore, the <strong>Concept Bottleneck Model with Open Vocabulary Concepts (OpenCBM)</strong> allows models to utilize any set of user-specified concepts for final predictions, even after training. This flexibility enables users to modify the concept set without retraining the model, facilitating dynamic exploration of concept correlations and enhancing practical applicability.
+            </p>
+            <p class="blog-text">
+              These advancements collectively contribute to the evolution of CBMs, making them more adaptable, interpretable, and applicable across diverse domains and tasks.
+            </p>
+
+            <h3 class="h3">Applications of CBMs</h3>
+            <p class="blog-text">
+              CBMs can be used in a wide variety of applications from healthcare, to finance. In healthcare, CBMs can be used to provide transparent decision pathways, aiding clinicians in understanding model predictions and making informed decisions. For example, a CBM can predict the presence of specific clinical features from medical images and use these features to diagnose diseases, offering explanations that align with medical knowledge. In finance, however, CBMs can base decisions on clear financial indicators, ensuring transparency in lending decisions and enhancing trust among stakeholders. By linking predictions to understandable financial concepts, such as credit score components or risk factors, CBMs facilitate better decision-making and regulatory compliance.
+            </p>
+
+            <h3 class="h3">Future Directions</h3>
+            <p class="blog-text">
+              Ongoing research aims to design more expressive and non-redundant concept sets to enhance CBM performance and applicability across various domains. Developing comprehensive and domain-specific concept sets can improve the model’s ability to capture relevant features, leading to more accurate and interpretable predictions.
+            </p>
+            <p class="blog-text">
+              Efforts are underway to develop models that maintain high accuracy while providing clear explanations, ensuring that interpretability does not come at the cost of performance. Techniques such as hybrid models that combine CBMs with traditional neural networks are being explored to achieve this balance.
+            </p>
+
+            <h3 class="h3">Conclusion</h3>
+            <p class="blog-text">
+              Concept Bottleneck Models represent a significant step toward making AI systems more transparent and trustworthy. By structuring models around human-understandable concepts, CBMs have the potential to transform AI from opaque “black boxes” into transparent “glass boxes,” fostering trust and accountability in AI-driven decisions.
+            </p>
+
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid rgba(255,255,255,0.1);" />
+
+            <h3 class="h3">References</h3>
+            <ol class="blog-text" style="padding-left: 18px;">
+              <li id="ref-1">
+                <a href="https://openreview.net/forum?id=qPH7lAyQgV" target="_blank" rel="noopener">Graph Concept Bottleneck Models. <em>OpenReview</em>.</a>
+              </li>
+              <li id="ref-2">
+                <a href="https://openaccess.thecvf.com/content/CVPR2024/papers/Shang_Incremental_Residual_Concept_Bottleneck_Models_CVPR_2024_paper.pdf" target="_blank" rel="noopener">Shang, J., et al. Incremental Residual Concept Bottleneck Models. <em>CVPR 2024</em>.</a>
+              </li>
+              <li id="ref-3">
+                <a href="https://arxiv.org/abs/2412.07992" target="_blank" rel="noopener">Sun, C.-E., Oikarinen, T., Ustun, B., &amp; Weng, T.-W. (2024). Concept Bottleneck Large Language Models. <em>arXiv:2412.07992</em>.</a>
+              </li>
+              <li id="ref-4">
+                <a href="https://arxiv.org/abs/2501.04975" target="_blank" rel="noopener">He, H., Zhu, L., Zhang, X., Zeng, S., Chen, Q., &amp; Lu, Y. (2025). V2C-CBM: Building Concept Bottlenecks with Vision-to-Concept Tokenizer. <em>arXiv:2501.04975</em>.</a>
+              </li>
+              <li id="ref-5">
+                <a href="https://arxiv.org/abs/2412.14097" target="_blank" rel="noopener">Choi, J., Raghuram, J., Li, Y., &amp; Jha, S. (2024). Adaptive Concept Bottleneck for Foundation Models Under Distribution Shifts. <em>arXiv:2412.14097</em>.</a>
+              </li>
+            </ol>
+
+          </div>
+        </section>
+
+        <!-- Back link styled like your navbar -->
+        <div style="margin-top: 24px;">
+          <a class="navbar-link" href="../index.html#blog">← Back to Blog</a>
+        </div>
+
+      </article>
     </div>
   </main>
 
