@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Why Attention Is Expensive — The Bottleneck at the Heart of Modern LLMs</title>
+  <meta
+    name="description"
+    content="A deep, intuitive, and technically grounded explanation of why self-attention is the core bottleneck in modern Transformers and large language models, and how this sets the stage for KV cache, grouped-query attention, and FlashAttention."
+  />
+
+  <!-- Favicon -->
+  <link rel="shortcut icon" href="../assets/images/favicon.ico" type="image/x-icon" />
+
+  <!-- Site CSS -->
+  <link rel="stylesheet" href="../assets/css/style.css" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap"
+    rel="stylesheet"
+  />
+</head>
+<body>
+  <div class="container">
+    <article class="post">
+      <header class="post-header">
+        <h1>Why Attention Is Expensive — The Bottleneck at the Heart of Modern LLMs</h1>
+        <p class="post-meta">
+          Series A · Article 1 · Modern LLM Architecture &amp; Efficiency
+        </p>
+      </header>
+
+      <section class="post-content">
+        <p>
+          If you stare at the attention mechanism inside a Transformer for long enough, you eventually
+          notice something slightly absurd: every time the model processes a sequence of length
+          <code>n</code>, it insists on comparing every token to every other token, even when most of
+          them have nothing interesting to say to each other. A conversation between two words becomes
+          an all-hands meeting of a thousand.
+        </p>
+
+        <p>
+          This all-to-all interaction is powerful. It is what lets Transformers model long-range
+          dependencies and replace RNNs and CNNs across language, vision, speech, and beyond. But it
+          comes with a very sharp price tag: the work the model does in self-attention grows
+          quadratically with sequence length. Double the sequence length and, in the worst case, the
+          attention computation becomes four times more expensive. Move from 2k tokens to 16k and the
+          work multiplies by sixty-four.
+        </p>
+
+        <p>
+          At small scales, this quadratic factor is tolerable. When Transformers were reading a sentence
+          or a short paragraph, nobody really cared. But large language models changed the scale of the
+          game. Now we routinely feed models multi-thousand-token prompts: legal briefs, long code
+          files, medical notes, entire conversations. The same
+          <em>“compare everything to everything”</em> rule still applies, and at these lengths the cost
+          stops being a nuisance and turns into the dominant bottleneck.
+        </p>
+
+        <p>
+          And the quadratic compute is only half the story. What makes attention truly painful at scale
+          is not just the number of floating-point operations, but the <strong>memory traffic</strong>
+          behind those operations. Modern GPUs are spectacular at dense matrix multiplies, but only when
+          the data they operate on lives close to the compute units. As soon as you start streaming
+          large matrices back and forth from high-bandwidth memory (HBM), performance collapses. A
+          naive implementation of attention does exactly that: it eagerly creates, reads, and writes
+          large <code>n × n</code> matrices that do not fit into fast on-chip memory, forcing the GPU to
+          spend most of its time waiting on data rather than performing math.
+        </p>
+
+        <p>
+          This article is about understanding why that happens. Not in hand-wavy terms like
+          “attention is O(n²)”, but in the more concrete sense of what the hardware actually has to do:
+          how many values it moves, how often it touches them, and where the bottlenecks really are.
+          This understanding will be the foundation for the next two articles in the series, where we
+          will look at how techniques like KV cache, multi-query and grouped-query attention, and
+          FlashAttention bend, dodge, or completely rewrite those bottlenecks.
+        </p>
+
+        <h2 id="anatomy-of-attention">The anatomy of self-attention</h2>
+
+        <p>
+          Let’s start from the familiar definition of scaled dot-product attention introduced in
+          <a href="https://arxiv.org/abs/1706.03762" target="_blank" rel="noopener"
+            >“Attention Is All You Need”</a
+          >.
+        </p>
+
+        <p>
+          Given an input sequence represented as a matrix
+          <code>X ∈ ℝ<sup>n × d<sub>model</sub></sup></code>, we compute three linear projections:
+        </p>
+
+        <pre><code>Q = X W_Q
+K = X W_K
+V = X W_V</code></pre>
+
+        <p>
+          Each row of <code>Q</code> is a query vector (what this token is looking for), each row of
+          <code>K</code> is a key vector (what this token offers to others), and each row of
+          <code>V</code> is a value vector (what this token will contribute if attended to). The
+          self-attention output is defined as:
+        </p>
+
+        <pre><code>Attention(Q, K, V) = softmax(Q Kᵀ / √d) V</code></pre>
+
+        <p>
+          In words: for each token, we take its query; we compare that query to all keys using dot
+          products; we turn those similarities into a probability distribution with a softmax; and then
+          we use that distribution to take a weighted sum of the value vectors. The result is a new
+          representation where each token has incorporated information from the entire sequence.
+        </p>
+
+        <p>
+          In code, a naive PyTorch implementation looks something like this:
+        </p>
+
+        <pre><code class="language-python">import math
+import torch
+import torch.nn.functional as F
+
+def scaled_dot_product_attention(Q, K, V):
+    # Q, K, V: (batch, heads, seq_len, head_dim)
+    d_k = Q.size(-1)
+    scores = Q @ K.transpose(-1, -2) / math.sqrt(d_k)  # (B, H, N, N)
+    weights = F.softmax(scores, dim=-1)                # (B, H, N, N)
+    return weights @ V                                 # (B, H, N, D)</code></pre>
+
+        <p>
+          This code is conceptually correct and perfectly fine for toy models. But there is a detail
+          here that becomes catastrophic at scale: the intermediate tensor <code>scores</code> has shape
+          <code>(batch, heads, seq_len, seq_len)</code>. If the sequence length is <code>n</code>, that
+          means each attention head is working with an <code>n × n</code> matrix. The same is true for
+          <code>weights</code> after softmax. These matrices are where the quadratic complexity lives.
+        </p>
+
+        <p>
+          When <code>n = 128</code>, an <code>n × n</code> matrix is 16k elements. When
+          <code>n = 4096</code>, it is over 16 million. When <code>n = 32,000</code>, it is about one
+          billion. And remember, this is per head, per layer, per batch.
+        </p>
+
+        <h2 id="quadratic-compute">Counting the cost: quadratic compute</h2>
+
+        <p>
+          Let’s make the quadratic nature of attention more explicit. Suppose:
+        </p>
+
+        <ul>
+          <li><code>n</code> is the sequence length,</li>
+          <li><code>h</code> is the number of attention heads,</li>
+          <li><code>d</code> is the dimension of each head.</li>
+        </ul>
+
+        <p>Forming the matrix <code>Q Kᵀ</code> involves:</p>
+
+        <ul>
+          <li><code>h</code> separate <code>n × d</code> by <code>d × n</code> matrix multiplies,</li>
+          <li>each producing an <code>n × n</code> matrix of dot products.</li>
+        </ul>
+
+        <p>
+          Roughly, the floating-point operations (FLOPs) required are on the order of
+          <code>h × n² × d</code>. The subsequent multiplication of <code>weights @ V</code> has the
+          same shape and costs another <code>h × n² × d</code> FLOPs. The softmax itself is
+          <code>O(h × n²)</code>, which is comparatively small.
+        </p>
+
+        <p>So the total complexity of the attention core is:</p>
+
+        <pre><code>FLOPs ≈ 2 × h × n² × d</code></pre>
+
+        <p>
+          Plug in some LLM-like numbers: <code>h = 32</code> heads,
+          <code>n = 4096</code> tokens, <code>d = 128</code> per head.
+        </p>
+
+        <pre><code class="language-python">h, n, d = 32, 4096, 128
+flops = 2 * h * n**2 * d
+print(f"{flops/1e12:.2f} TFLOPs")</code></pre>
+
+        <p>
+          This prints roughly <strong>137 TFLOPs</strong> for a single forward pass of a single attention
+          layer. A 70B-parameter model can easily have 48 or more layers. Multiply accordingly and you
+          start to see why attention ends up being the dominant compute cost.
+        </p>
+
+        <p>
+          But in practice, attention is not simply “compute-bound.” On modern GPUs, the raw
+          floating-point throughput is so high that the limiting factor is often something else:
+          <strong>how fast you can move the data needed for those computations</strong>.
+        </p>
+
+        <h2 id="memory-io">The real villain: memory and IO</h2>
+
+        <p>
+          GPUs are built around a simple idea: if you can feed the compute units with a steady stream of
+          data, they will happily chew through huge matrix multiplies. But for attention, the challenge
+          is not the arithmetic itself, it’s the pattern of memory access.
+        </p>
+
+        <p>
+          A naive attention implementation does the following at a high level:
+        </p>
+
+        <ol>
+          <li>Read the full <code>Q</code> and <code>K</code> tensors from high-bandwidth memory.</li>
+          <li>Compute <code>scores = Q Kᵀ</code> and write the full <code>scores</code> matrix back.</li>
+          <li>Read <code>scores</code> again to apply the softmax.</li>
+          <li>Write the normalized <code>weights</code> matrix.</li>
+          <li>Read <code>weights</code> again and multiply by <code>V</code>.</li>
+          <li>Write the final attention output.</li>
+        </ol>
+
+        <p>
+          Each <code>scores</code> or <code>weights</code> tensor is of shape
+          <code>(batch, heads, n, n)</code>. For a single head, that’s an <code>n × n</code> matrix. At
+          <code>n = 4096</code>, this matrix has over 16 million elements. In FP16 or BF16, that’s about
+          32 MB <em>per head</em>. Multiply by 32 heads and you are around a gigabyte. Multiply by
+          multiple layers and batches and you start blowing through tens of gigabytes of memory just to
+          hold intermediate attention scores that will not be reused.
+        </p>
+
+        <p>
+          Worse, these matrices don’t fit in the fast on-chip memory (registers and shared SRAM), so
+          they live mostly in HBM. The GPU must repeatedly read and write them, even though at any given
+          moment it only needs a small subset of their entries. The result is a pattern of memory
+          accesses that is deeply unfriendly to the hardware.
+        </p>
+
+        <p>
+          A useful analogy is a chef with incredible knife skills who has to cook a dish but keeps all
+          the ingredients in a pantry fifty meters away. The chef’s knife skills (compute) aren’t the
+          limiting factor; the repeated trips to the pantry (memory access) are. That is what naive
+          attention is doing to your GPU.
+        </p>
+
+        <p>
+          This is exactly the perspective adopted by
+          <a href="https://arxiv.org/abs/2205.14135" target="_blank" rel="noopener">FlashAttention</a>:
+          instead of focusing on reducing FLOPs, it focuses on reducing <em>memory traffic</em>. The
+          algorithm restructures attention so that it never materializes the full <code>n × n</code>
+          matrix in HBM at all. It computes attention in small tiles that fit into on-chip SRAM, streams
+          over the sequence, and drastically cuts down both memory usage and IO.
+        </p>
+
+        <p>
+          We will dive into FlashAttention in detail in Article 3. For now, the important takeaway is
+          this: <strong>naive attention is not only quadratically expensive in theory, it is
+          catastrophically memory-bound in practice.</strong>
+        </p>
+
+        <h2 id="training-vs-inference">Training vs inference: two regimes, different bottlenecks</h2>
+
+        <p>
+          So far we have been implicitly talking about training-time attention: you give the model a full
+          sequence of <code>n</code> tokens, and it computes attention for all positions in parallel. But
+          at inference time, especially for autoregressive language models, the situation changes
+          dramatically.
+        </p>
+
+        <p>
+          During training, we compute all attention scores for all positions:
+          <code>token i</code> attends to every <code>token j</code>. The cost is fully
+          <code>O(n²)</code>. During inference, the model generates one token at a time. When we
+          generate token <code>t</code>, the only new attention computation we perform is:
+        </p>
+
+        <pre><code>Attention(q_t, K_≤t, V_≤t)</code></pre>
+
+        <p>
+          The query belongs to the latest token, but the keys and values belong to
+          <em>all previous tokens</em>. This means two things:
+        </p>
+
+        <ol>
+          <li>The compute per step is now <code>O(n)</code> instead of <code>O(n²)</code>.</li>
+          <li>We must cache <em>all</em> past keys and values somewhere.</li>
+        </ol>
+
+        <p>
+          That “somewhere” is what people call the <strong>KV cache</strong>.
+        </p>
+
+        <h2 id="kv-cache">The KV cache: inference runs into a different wall</h2>
+
+        <p>
+          The KV cache is nothing mysterious. For each transformer layer at inference time, we store:
+        </p>
+
+        <ul>
+          <li>
+            a tensor of keys with shape <code>(batch, heads, seq_len, head_dim)</code>,
+          </li>
+          <li>
+            and a tensor of values with the same shape.
+          </li>
+        </ul>
+
+        <p>
+          Every time we generate a new token, we:
+        </p>
+
+        <ol>
+          <li>Compute the key and value for that token at that layer.</li>
+          <li>Append them to the existing cache along the sequence dimension.</li>
+          <li>Use the entire cache <code>K_≤t</code>, <code>V_≤t</code> to compute attention for the new token.</li>
+        </ol>
+
+        <p>
+          If we let <code>n</code> be the total sequence length (prompt plus generated tokens), then the
+          memory required for the KV cache of a single layer is approximately:
+        </p>
+
+        <pre><code>Size ≈ 2 × n × h × d × bytes_per_element</code></pre>
+
+        <p>
+          For BF16 or FP16, <code>bytes_per_element = 2</code>. If we again plug in LLaMA-style numbers
+          with <code>h = 32</code> heads, <code>d = 128</code> per head, and
+          <code>n = 4096</code> tokens, we get:
+        </p>
+
+        <pre><code>Size ≈ 2 × 4096 × 32 × 128 × 2 bytes ≈ 134 MB per layer</code></pre>
+
+        <p>
+          A 32-layer model would then require roughly <strong>4.3 GB</strong> of memory just for the KV
+          cache at 4k tokens. This is in addition to the model weights themselves, optimizer states (if
+          you are doing on-the-fly adaptation), and any activations that need to be kept around.
+        </p>
+
+        <p>
+          If you try to push the context to 8k, 16k, or 32k tokens, the KV cache scales linearly with
+          <code>n</code> and quickly eats the entire memory budget of your GPU. It is not that the model
+          suddenly becomes too slow; it simply cannot store all the keys and values.
+        </p>
+
+        <p>
+          This is the problem that <strong>Multi-Query Attention (MQA)</strong> and
+          <strong>Grouped-Query Attention (GQA)</strong> solve. Rather than storing separate keys and
+          values for each head, these methods make some or all heads share a smaller set of key and
+          value vectors. This shrinks the KV cache, often by factors of 8x to 64x, and makes long-context
+          inference feasible on hardware that would otherwise run out of memory.
+        </p>
+
+        <p>
+          We will explore MQA, GQA, and practical KV cache design in detail in Article 2.
+        </p>
+
+        <h2 id="when-it-breaks">When naive attention simply breaks</h2>
+
+        <p>
+          It is worth pausing to see how quickly things get out of hand if we increase sequence length
+          and do nothing clever.
+        </p>
+
+        <p>
+          At <code>n = 32,000</code> tokens, an <code>n × n</code> matrix has:
+        </p>
+
+        <pre><code>32,000² = 1,024,000,000</code></pre>
+
+        <p>
+          entries—about one billion. For a single attention head at FP16, that is approximately 2 GB of
+          data. We usually do not have just one head; we might have 16, 32, or more. We also do not have
+          just one layer; modern LLMs can have dozens of layers. The raw attention scores alone would
+          blow past the memory of high-end GPUs, even before we consider gradients during training.
+        </p>
+
+        <p>
+          This is why long-context models cannot stick with naive attention. They must either:
+        </p>
+
+        <ul>
+          <li>avoid ever forming the full attention matrix in memory (FlashAttention and friends),</li>
+          <li>change the structure of attention in some way (local, sparse, or low-rank variants),</li>
+          <li>or move to alternative architectures that scale sub-quadratically.</li>
+        </ul>
+
+        <p>
+          A particularly influential line of work here is FlashAttention. The key idea is not to
+          approximate attention, but to <em>reorder the computation</em> so that it stays within fast
+          memory. Instead of computing <code>Q Kᵀ</code> in one big shot, FlashAttention tiles the
+          computation over blocks of the sequence that fit into SRAM, performs the softmax and
+          <code>V</code> multiplication on the fly, and accumulates partial results. The end result is
+          exactly the same as naive attention, but the peak memory usage and total IO are dramatically
+          reduced.
+        </p>
+
+        <p>
+          From the outside, this might look like a low-level implementation detail. In reality, it is a
+          fundamental shift in how we think about attention: not as a mathematical formula
+          <code>softmax(Q Kᵀ / √d) V</code> that we plug into any deep learning framework, but as an
+          <em>algorithm</em> that must be designed to suit the hardware.
+        </p>
+
+        <h2 id="big-picture">The big picture: why this bottleneck matters</h2>
+
+        <p>
+          At this point, we can summarize the situation in a few key observations:
+        </p>
+
+        <p>
+          First, self-attention is the only part of the Transformer whose cost scales quadratically with
+          sequence length. The feed-forward networks, projections, and embeddings all scale linearly in
+          <code>n</code>. This makes self-attention the natural bottleneck as we push context lengths
+          higher.
+        </p>
+
+        <p>
+          Second, the bottleneck is not just theoretical. On actual GPUs, naive attention is often
+          <em>memory-bound</em>: the GPU spends more time moving data to and from HBM than doing
+          arithmetic. This is why IO-aware algorithms like FlashAttention can deliver large speedups
+          without changing the underlying mathematics.
+        </p>
+
+        <p>
+          Third, training and inference live in different worlds. During training, we pay the full
+          <code>O(n²)</code> cost and are constrained by activation memory and attention score storage.
+          During inference, attention is <code>O(n)</code> per token, but we accumulate state in the form
+          of the KV cache, and that cache becomes the dominant consumer of memory as context length
+          grows.
+        </p>
+
+        <p>
+          Fourth, these bottlenecks are not academic curiosities. They directly determine:
+        </p>
+
+        <ul>
+          <li>How long a context an LLM can realistically support.</li>
+          <li>What batch sizes we can use during training.</li>
+          <li>How many concurrent requests we can serve in production.</li>
+          <li>Whether we can run the model on a single consumer GPU or need a cluster.</li>
+        </ul>
+
+        <p>
+          Every modern “efficient LLM” idea is, in one way or another, an attempt to navigate this
+          terrain. KV cache and GQA attack the inference memory problem. FlashAttention attacks the
+          training and prefill IO problem. Sparse and local attention patterns attack the quadratic
+          scaling itself. Sub-quadratic architectures (state-space models, convolutional alternatives)
+          try to sidestep attention entirely.
+        </p>
+
+        <p>
+          To design or evaluate these methods, you need a clear mental model of what vanilla attention
+          does to your hardware. That has been the goal of this article.
+        </p>
+
+        <h2 id="next">Where we go next</h2>
+
+        <p>
+          In the next two articles of this series, we will build directly on this understanding.
+        </p>
+
+        <p>
+          In <strong>Article 2</strong>, we will focus on inference. We will zoom in on the KV cache,
+          quantify exactly how much memory it uses, and understand why multi-head attention is a bad deal
+          at inference time. We will then introduce multi-query attention and grouped-query attention,
+          show how they shrink the KV cache by factors of up to 64x, and discuss the trade-offs they
+          introduce in model quality.
+        </p>
+
+        <p>
+          In <strong>Article 3</strong>, we will turn to training-time and prefill efficiency. We will
+          unpack FlashAttention as an IO-aware algorithm, look at how tiling and fusion let us compute
+          attention without ever forming the full attention matrix in memory, and see what this means for
+          long-context training and modern LLM kernels.
+        </p>
+
+        <p>
+          Together, the three articles should give you a coherent picture of how attention evolved from a
+          beautifully simple idea on paper to a highly engineered, hardware-aware mechanism at the core
+          of today’s large language models.
+        </p>
+      </section>
+    </article>
+  </div>
+</body>
+</html>
