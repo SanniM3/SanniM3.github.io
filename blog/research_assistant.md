@@ -27,9 +27,8 @@ Modern agent frameworks have embraced this approach; for instance, some research
 
 Finally, recent tooling makes it easier to build and orchestrate these complex pipelines. Frameworks such as **LangChain** (with its LangGraph module) and others (LlamaIndex, Haystack, etc.) allow developers to define agents and tools in a graph or chain, controlling the flow of information between them. Graph-based agent construction provides fine-grained control and transparency in how each step executes ([source](https://pinecone.io)). For example, LangGraph (LangChain’s graph-based agent framework) supports stateful, multi-step flows and has been used to implement state-of-the-art research agent workflows ([source](https://pinecone.io), [source](https://arxiv.org)). The LiRA system mentioned above was built entirely using LangGraph, with each agent maintaining its own state and memory to handle intermediate results and feedback ([source](https://arxiv.org)). In summary, combining multi-agent design with RAG and modern orchestration frameworks creates a powerful approach: an **agentic RAG** system that can autonomously perform deep research and document generation.
 
-> **Figure:** A graph-based multi-agent research pipeline. The figure below illustrates a simplified architecture of such a system, where each node represents an agent or tool (e.g., web search, paper fetch, RAG-based retrieval) and edges represent the flow of information between steps. The design allows the agent to search the web and academic databases, filter and store relevant information, and ultimately synthesize a detailed answer (or report) from the collected knowledge ([source](https://pinecone.io)).
 
-> *(Image placeholder: Graph-based workflow showing web search, arXiv retrieval, RAG query, and writing)*
+> *(Image placeholder: Graph-based workflow showing web search, arXiv retrieval, RAG query, writing and academic review.)*
 
 ## Multi‑Agent Deep Research Workflow
 
