@@ -1,16 +1,16 @@
 ---
-layout: null
+layout: default
 title: Why Attention Is Expensive - Understanding the Bottleneck at the Heart of Modern LLMs
 ---
 # Why Attention Is Expensive - Understanding the Bottleneck at the Heart of Modern LLMs
 
-There is a moment, when you first really look at the attention mechanism inside a Transformer, when something feels slightly absurd. The model takes a sequence of \(n\) tokens, and for every single one of them, it insists on comparing it to every other token, whether or not they have anything interesting to say. A conversation between two words becomes an all-hands meeting of a thousand. That’s the cost of expressivity: self-attention gives every token a global view of the sequence, but it extracts that view by performing \(n^2\) comparisons.
+There is a moment, when you first really look at the attention mechanism inside a Transformer, when something feels slightly absurd. The model takes a sequence of $n$ tokens, and for every single one of them, it insists on comparing it to every other token, whether or not they have anything interesting to say. A conversation between two words becomes an all-hands meeting of a thousand. That’s the cost of expressivity: self-attention gives every token a global view of the sequence, but it extracts that view by performing $n^2$ comparisons.
 
 When sequences were short—thirty tokens, maybe a hundred—this didn’t matter. But LLMs changed the scale of the game. Suddenly the model isn’t reading a sentence; it’s reading a book chapter, a legal brief, a source file, a patient history, a chat log stretching back 8,000 tokens. The same “compare everything to everything” rule still applies, and the cost now grows quadratically. It’s not subtle. Double the sequence length and attention becomes four times more expensive. Go from 2k tokens to 16k and, in the worst case, the work multiplies by sixty-four.
 
 This quadratic explosion is only the start of the trouble.
 
-What makes attention truly painful is not just the math—it’s the memory traffic behind the math. GPUs are spectacular at dense matrix multiplies, but only when the data lives close to the compute. As soon as you start thrashing high-bandwidth memory (HBM), performance collapses. And the naive implementation of attention thrashes HBM with almost gleeful abandon. Every time it forms the attention matrix \(QK^T\), it reads the full query matrix, the full key matrix, writes the full matrix of pairwise scores, reads it again for softmax, writes the normalized weights, reads them again to multiply by \(V\), and finally writes the output. Each of these is a large, dense tensor the GPU has to pull in and out of memory, even though only a small slice of it is “hot” at any given time.
+What makes attention truly painful is not just the math—it’s the memory traffic behind the math. GPUs are spectacular at dense matrix multiplies, but only when the data lives close to the compute. As soon as you start thrashing high-bandwidth memory (HBM), performance collapses. And the naive implementation of attention thrashes HBM with almost gleeful abandon. Every time it forms the attention matrix $QK^T$, it reads the full query matrix, the full key matrix, writes the full matrix of pairwise scores, reads it again for softmax, writes the normalized weights, reads them again to multiply by $V$, and finally writes the output. Each of these is a large, dense tensor the GPU has to pull in and out of memory, even though only a small slice of it is “hot” at any given time.
 
 At sufficient scale, attention becomes less of a mathematical operation and more of a memory-shuffling ceremony.
 
@@ -22,9 +22,9 @@ But before we talk about optimizations, we need to understand the problem deeply
 
 Let’s start from the familiar equation:
 
-\[
+$$
 \text{Attention}(Q, K, V) = \text{softmax}\left(\frac{Q K^T}{\sqrt{d}}\right)V.
-\]
+$$
 
 The entire procedure is simple enough:
 
@@ -37,7 +37,7 @@ There is a wonderful symmetry in this. Self-attention is just “ask each token 
 
 The trouble begins when we stop admiring the idea and start counting operations.
 
-If the sequence has length \(n\), and the model has \(h\) heads, each of dimension \(d\), then forming the matrix \(QK^T\) involves computing \(h\) matrices of shape \(n \times n\), each cell containing a dot product over a \(d\)-dimensional space. The total work is on the order of:
+If the sequence has length $n$, and the model has $h$ heads, each of dimension $d$, then forming the matrix $QK^T$ involves computing $h$ matrices of shape $n \times n$, each cell containing a dot product over a $d$-dimensional space. The total work is on the order of:
 
 O(h n^2 d)
 
@@ -45,7 +45,7 @@ and the memory footprint of those matrices is:
 
 O(h n^2).
 
-It is this \(n^2\) that causes everything downstream to break. Nothing else in the Transformer scales so aggressively with sequence length—not the feed-forward networks, not the projections, not the embeddings. Attention is the only part of the architecture where doubling the sequence length squares the work.
+It is this $n^2$ that causes everything downstream to break. Nothing else in the Transformer scales so aggressively with sequence length—not the feed-forward networks, not the projections, not the embeddings. Attention is the only part of the architecture where doubling the sequence length squares the work.
 
 To make this more concrete, imagine the FLOP count for a single layer of a LLaMA-sized model. If we wanted to calculate it in Python, it might look like this:
 
@@ -70,7 +70,7 @@ A naive attention implementation does something pathological from the GPU’s pe
 Here’s an approximate sketch of what happens inside the GPU during naive attention:
 
 1. Read Q and K from HBM.  
-2. Compute \(QK^T\) and write the full matrix to HBM.  
+2. Compute $QK^T$ and write the full matrix to HBM.  
 3. Read the full matrix back from HBM for softmax.  
 4. Write the normalized attention weights to HBM.  
 5. Read those weights again to multiply them by V.  
@@ -102,7 +102,7 @@ And that state has a name: the KV cache.
 
 During autoregressive generation, each new token computes its Q, K, and V vectors. The new token’s Q attends to **all** previously computed K and V vectors. This means the model must store all K and V vectors for all previous tokens across all heads in all layers.
 
-For a sequence length \(n\), the KV cache size for a single layer is:
+For a sequence length $n$, the KV cache size for a single layer is:
 
 Size = 2 * n * h * d
 
@@ -122,9 +122,9 @@ At very long context lengths, naive attention simply stops being usable.
 
 Consider a sequence length of 32,000 tokens. The attention matrix alone contains:
 
-\[
+$$
 (32,000)^2 = 1.024 \times 10^9 \text{ elements}
-\]
+$$
 
 At FP16, storing this matrix takes roughly **2 gigabytes**. That is for the attention scores alone—not the gradients, not Q/K/V, not the softmax output.
 
