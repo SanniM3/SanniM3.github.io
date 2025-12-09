@@ -1,6 +1,6 @@
 ---
 layout: null
-title: Why Attention Is Expensive: Understanding the Bottleneck at the Heart of Modern LLMs
+title: Why Attention Is Expensive - Understanding the Bottleneck at the Heart of Modern LLMs
 ---
 
 There is a moment, when you first really look at the attention mechanism inside a Transformer, when something feels slightly absurd. The model takes a sequence of \(n\) tokens, and for every single one of them, it insists on comparing it to every other token, whether or not they have anything interesting to say. A conversation between two words becomes an all-hands meeting of a thousand. That’s the cost of expressivity: self-attention gives every token a global view of the sequence, but it extracts that view by performing \(n^2\) comparisons.
