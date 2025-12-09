@@ -3,8 +3,6 @@ layout: null
 title: Test Post – Markdown Rendering
 ---
 
-
-
 This is a **sample blog post** to test how GitHub Pages renders Markdown, including:
 
 - Headings  
