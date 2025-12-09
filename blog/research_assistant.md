@@ -152,7 +152,7 @@ Another technique is to use smaller specialized models or heuristics for some ta
 
 Recent benchmarks of RAG frameworks show that different tools have varying overheads ([source](https://research.aimultiple.com), [source](https://research.aimultiple.com)), but ultimately the majority of time is spent in LLM calls and I/O, so optimizing those (like using a faster model for draft generation if absolute top quality isn’t needed) can be considered.
 
-### Case Study: Medical Image Analysis with Deep Learning
+<!-- ### Case Study: Medical Image Analysis with Deep Learning
 
 To ground this design in a concrete scenario, imagine a researcher wants a survey on **“Recent advances in medical image analysis with deep learning.”**
 
@@ -185,7 +185,7 @@ To ground this design in a concrete scenario, imagine a researcher wants a surve
 
    **Revision agent** retrieves supporting content and adds a paragraph on data augmentation and transfer learning.
 
-After a polishing pass, the final product is a ~10-page survey with dozens of references and a coherent narrative — produced in a few hours instead of weeks.
+After a polishing pass, the final product is a ~10-page survey with dozens of references and a coherent narrative — produced in a few hours instead of weeks. -->
 
 ## Conclusion
 
