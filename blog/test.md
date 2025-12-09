@@ -5,7 +5,7 @@ title: Math Test
 
 # Math test
 
-Inline: this sequence has $n$ tokens.
+Inline: this sequence has $n$ tokens. \(n^2\)
 
 Block:
 
