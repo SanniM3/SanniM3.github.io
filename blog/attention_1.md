@@ -10,11 +10,11 @@ When sequences were short—thirty tokens, maybe a hundred—this didn’t matte
 
 This quadratic explosion is only the start of the trouble.
 
-What makes attention truly painful is not just the math—it’s the memory traffic behind the math. GPUs are spectacular at dense matrix multiplies, but only when the data lives close to the compute. As soon as you start thrashing high-bandwidth memory (HBM), performance collapses. And the naive implementation of attention thrashes HBM with almost gleeful abandon. Every time it forms the attention matrix $QK^T$, it reads the full query matrix, the full key matrix, writes the full matrix of pairwise scores, reads it again for softmax, writes the normalized weights, reads them again to multiply by $V$, and finally writes the output. Each of these is a large, dense tensor the GPU has to pull in and out of memory, even though only a small slice of it is “hot” at any given time.
+What makes attention truly painful is not just the math, rather, it’s the memory traffic behind the math. GPUs are spectacular at dense matrix multiplies, but only when the data lives close to the compute. As soon as you start thrashing high-bandwidth memory (HBM), performance collapses. And the naive implementation of attention thrashes HBM with almost gleeful abandon. Every time it forms the attention matrix $QK^T$, it reads the full query matrix, the full key matrix, writes the full matrix of pairwise scores, reads it again for softmax, writes the normalized weights, reads them again to multiply by $V$, and finally writes the output. Each of these is a large, dense tensor the GPU has to pull in and out of memory, even though only a small slice of it is “hot” at any given time.
 
 At sufficient scale, attention becomes less of a mathematical operation and more of a memory-shuffling ceremony.
 
-This article is about understanding exactly why that happens—not in hand-wavey terms, but at the level where the bottlenecks are obvious and almost inevitable. It’s the foundation for the next two articles, where we’ll explore how techniques like KV-cache, Multi-Query / Grouped-Query Attention, and FlashAttention bend, dodge, or completely rewrite these bottlenecks.
+This article is about understanding exactly why that happens at the level where the bottlenecks are obvious and almost inevitable. It’s the foundation for the next two articles, where we’ll explore how techniques like KV-cache, Multi-Query / Grouped-Query Attention, and FlashAttention bend, dodge, or completely rewrite these bottlenecks.
 
 But before we talk about optimizations, we need to understand the problem deeply.
 
@@ -63,7 +63,7 @@ This is still only half of the bottleneck.
 
 ## **Why naive attention is memory-bound, not compute-bound**
 
-If attention required 137 TFLOPs and the GPU had infinite memory bandwidth, then the solution would be simple: buy more FLOPs. But GPUs don’t work like that. The arithmetic is incredibly fast—Tensor Cores can chew through multiplies at astonishing speeds—but getting data to and from those cores is expensive. HBM is fast relative to CPU DRAM, but glacial compared to the registers and shared memory inside the GPU.
+If attention required 137 TFLOPs and the GPU had infinite memory bandwidth, then the solution would be simple: buy more FLOPs. But GPUs don’t work like that. The arithmetic is incredibly fast-Tensor Cores can chew through multiplies at astonishing speeds—but getting data to and from those cores is expensive. HBM is fast relative to CPU DRAM, but glacial compared to the registers and shared memory inside the GPU.
 
 A naive attention implementation does something pathological from the GPU’s perspective: it repeatedly materializes and reads large matrices that don’t fit in fast memory at once.
 
@@ -80,11 +80,11 @@ Each read/write touches gigabytes of data at long sequence lengths. FLOPs aren�
 
 A useful analogy: imagine you’re a chef with excellent knife skills (compute), but every step of the recipe requires you to walk to a pantry 50 meters away and bring back ingredients one spoonful at a time (memory). Your knife skills don’t matter; you’re bottlenecked by walking back and forth.
 
-This is why almost all attention optimizations—FlashAttention most famously—focus not on reducing FLOPs, but on reducing memory traffic. Compute is cheap; memory is expensive.
+This is why almost all attention optimizations, most famously, FlashAttention, focus not on reducing FLOPs, but on reducing memory traffic. Compute is cheap; memory is expensive.
 
 ## **Training attention vs inference attention: two worlds with different physics**
 
-The moment you move from training to inference, the attention mechanism undergoes a profound shift. This shift is so fundamental that efficient inference techniques look almost unrelated to efficient training techniques—because the bottlenecks flip.
+The moment you move from training to inference, the attention mechanism undergoes a profound shift. This shift is so fundamental that efficient inference techniques look almost unrelated to efficient training techniques, because the bottlenecks flip.
 
 During training, the model sees the entire sequence at once. Every token attends to every other token. The cost is fully quadratic.
 
@@ -112,7 +112,7 @@ Memory = 2nhd * 2 bytes.
 
 For a LLaMA-like model (h = 32, d = 128, n = 4096), this comes out to roughly **134 MB per layer**. With 32 layers, that’s more than **4 GB** just for the KV cache.
 
-This is why inference is often memory-bound before it is compute-bound. It’s also why techniques like Multi-Query Attention, Grouped-Query Attention, and PagedAttention exist at all—they dramatically shrink the KV cache footprint and make inference feasible on real hardware.
+This is why inference is often memory-bound before it is compute-bound. It’s also why techniques like Multi-Query Attention, Grouped-Query Attention, and PagedAttention exist at all - they dramatically shrink the KV cache footprint and make inference feasible on real hardware.
 
 We will dig into these methods in **Article 2**.
 
@@ -149,7 +149,7 @@ Everything else—KV cache, MQA, GQA, FlashAttention, PagedAttention, long-conte
 
 ## **Where we go from here**
 
-Now that you understand the bottleneck deeply—not as a formula, but as an intuition—we are ready for the next two parts.
+Now that you understand the bottleneck, we are ready for the next two parts.
 
 ### **Article 2: The KV Cache, Multi-Query Attention, and Grouped-Query Attention**  
 Why inference is bottlenecked by memory, not compute.  
