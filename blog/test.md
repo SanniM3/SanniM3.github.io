@@ -1,5 +1,5 @@
 ---
-layout: null
+layout: default
 title: Why Attention Is Expensive - Understanding the Bottleneck at the Heart of Modern LLMs
 ---
 # Why Attention Is Expensive - Understanding the Bottleneck at the Heart of Modern LLMs
