@@ -1,9 +1,10 @@
 ---
-layout: default
-title: Designing a Multi‑Agent Deep Research System for Academic Survey Writing
+layout: post
+title: Designing a Multi-Agent Deep Research System
+description: A deep dive into building AI systems for academic survey writing
+category: Applications
+date: 2025-12-02
 ---
-
-# Designing a Multi‑Agent Deep Research System for Academic Survey Writing
 
 ## Introduction
 

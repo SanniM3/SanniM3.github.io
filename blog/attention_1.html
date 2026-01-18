@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Why Attention Is Expensive | Mardhiyah Sanni</title>
+  <meta name="description" content="Understanding the Bottleneck at the Heart of Modern LLMs">
+  
+  <link rel="shortcut icon" href="../assets/images/favicon.ico" type="image/x-icon">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="../assets/css/main.css">
+  
+  <!-- Code Highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  
+  <!-- MathJax -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  
+  <!-- Theme Initialization -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>
+<body>
+  <div class="blog-wrapper">
+    <div class="reading-progress" id="reading-progress"></div>
+    
+    <nav class="blog-nav">
+      <div class="blog-nav-inner">
+        <a href="../index.html" class="blog-back-link">
+          <ion-icon name="arrow-back"></ion-icon>
+          <span>Back to Home</span>
+        </a>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+          <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </nav>
+    
+    <article class="blog-article">
+      <header class="blog-header">
+        <span class="blog-header-category">LLM Fundamentals</span>
+        <h1 class="blog-header-title">Why Attention Is Expensive</h1>
+        <div class="blog-header-meta">
+          <div class="blog-header-meta-item">
+            <ion-icon name="time-outline"></ion-icon>
+            <span>12 min read</span>
+          </div>
+        </div>
+      </header>
+      
+      <div class="blog-content">
+        <p>There is a moment, when you first really look at the attention mechanism inside a Transformer, when something feels slightly absurd. The model takes a sequence of $n$ tokens, and for every single one of them, it insists on comparing it to every other token, whether or not they have anything interesting to say. A conversation between two words becomes an all-hands meeting of a thousand. That's the cost of expressivity: self-attention gives every token a global view of the sequence, but it extracts that view by performing $n^2$ comparisons.</p>
+
+        <p>When sequences were short—thirty tokens, maybe a hundred—this didn't matter. But LLMs changed the scale of the game. Suddenly the model isn't reading a sentence; it's reading a book chapter, a legal brief, a source file, a patient history, a chat log stretching back 8,000 tokens. The same "compare everything to everything" rule still applies, and the cost now grows quadratically. It's not subtle. Double the sequence length and attention becomes four times more expensive. Go from 2k tokens to 16k and, in the worst case, the work multiplies by sixty-four.</p>
+
+        <p>This quadratic explosion is only the start of the trouble.</p>
+
+        <p>What makes attention truly painful is not just the math, rather, it's the memory traffic behind the math. GPUs are spectacular at dense matrix multiplies, but only when the data lives close to the compute. As soon as you start thrashing high-bandwidth memory (HBM), performance collapses. And the naive implementation of attention thrashes HBM with almost gleeful abandon.</p>
+
+        <p>At sufficient scale, attention becomes less of a mathematical operation and more of a memory-shuffling ceremony.</p>
+
+        <p>This article is about understanding exactly why that happens at the level where the bottlenecks are obvious and almost inevitable. It's the foundation for the next two articles, where we'll explore how techniques like KV-cache, Multi-Query / Grouped-Query Attention, and FlashAttention bend, dodge, or completely rewrite these bottlenecks.</p>
+
+        <p>But before we talk about optimizations, we need to understand the problem deeply.</p>
+
+        <h2>The attention mechanism in its purest form</h2>
+
+        <p>Let's start from the familiar equation:</p>
+
+        <div class="math-display">
+          $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{Q K^T}{\sqrt{d}}\right)V$$
+        </div>
+
+        <p>The entire procedure is simple enough:</p>
+
+        <ol>
+          <li>Project each token's embedding into three vectors: query (what I'm looking for), key (what I contain), and value (what I contribute).</li>
+          <li>Compare each query to every key.</li>
+          <li>Use those comparisons to weight all the value vectors.</li>
+        </ol>
+
+        <p>There is a wonderful symmetry in this. Self-attention is just "ask each token who it should listen to," encoded as dot products. This elegant mechanism is the reason Transformers have replaced RNNs and CNNs across nearly every domain: it naturally captures long-range dependencies, and it does so without a fixed inductive bias about locality or recurrence.</p>
+
+        <p>The trouble begins when we stop admiring the idea and start counting operations.</p>
+
+        <p>If the sequence has length $n$, and the model has $h$ heads, each of dimension $d$, then forming the matrix $QK^T$ involves computing $h$ matrices of shape $n \times n$, each cell containing a dot product over a $d$-dimensional space. The total work is on the order of:</p>
+
+        <p><strong>O(h n² d)</strong></p>
+
+        <p>and the memory footprint of those matrices is:</p>
+
+        <p><strong>O(h n²)</strong></p>
+
+        <p>It is this $n^2$ that causes everything downstream to break. Nothing else in the Transformer scales so aggressively with sequence length—not the feed-forward networks, not the projections, not the embeddings. Attention is the only part of the architecture where doubling the sequence length squares the work.</p>
+
+        <p>To make this more concrete, imagine the FLOP count for a single layer of a LLaMA-sized model:</p>
+
+<pre><code class="language-python">h, n, d = 32, 4096, 128
+flops = 2 * h * n**2 * d  # QK^T + softmax(V)
+print(f"{flops/1e12:.2f} TFLOPs")</code></pre>
+
+        <p>For typical settings (32 heads, head dimension 128, sequence length 4096), you would see a number around <strong>137 trillion floating point operations</strong>. And that is only the attention computation for one forward pass of one layer.</p>
+
+        <p>A large model stacks dozens of these layers. This is still only half of the bottleneck.</p>
+
+        <h2>Why naive attention is memory-bound, not compute-bound</h2>
+
+        <p>If attention required 137 TFLOPs and the GPU had infinite memory bandwidth, then the solution would be simple: buy more FLOPs. But GPUs don't work like that. The arithmetic is incredibly fast—Tensor Cores can chew through multiplies at astonishing speeds—but getting data to and from those cores is expensive.</p>
+
+        <p>A naive attention implementation does something pathological from the GPU's perspective: it repeatedly materializes and reads large matrices that don't fit in fast memory at once.</p>
+
+        <p>Here's an approximate sketch of what happens inside the GPU during naive attention:</p>
+
+        <ol>
+          <li>Read Q and K from HBM.</li>
+          <li>Compute $QK^T$ and write the full matrix to HBM.</li>
+          <li>Read the full matrix back from HBM for softmax.</li>
+          <li>Write the normalized attention weights to HBM.</li>
+          <li>Read those weights again to multiply them by V.</li>
+          <li>Write the final output.</li>
+        </ol>
+
+        <p>Each read/write touches gigabytes of data at long sequence lengths. FLOPs aren't the problem—bandwidth is.</p>
+
+        <p>A useful analogy: imagine you're a chef with excellent knife skills (compute), but every step of the recipe requires you to walk to a pantry 50 meters away and bring back ingredients one spoonful at a time (memory). Your knife skills don't matter; you're bottlenecked by walking back and forth.</p>
+
+        <p>This is why almost all attention optimizations, most famously FlashAttention, focus not on reducing FLOPs, but on reducing memory traffic. <strong>Compute is cheap; memory is expensive.</strong></p>
+
+        <h2>Training attention vs inference attention: two worlds with different physics</h2>
+
+        <p>The moment you move from training to inference, the attention mechanism undergoes a profound shift. This shift is so fundamental that efficient inference techniques look almost unrelated to efficient training techniques, because the bottlenecks flip.</p>
+
+        <p>During training, the model sees the entire sequence at once. Every token attends to every other token. The cost is fully quadratic.</p>
+
+        <p>During inference, the model generates one token at a time. Each new token only attends to the past.</p>
+
+        <p>This means:</p>
+
+        <ul>
+          <li>Training is dominated by O(n²) operations.</li>
+          <li>Inference is dominated by O(n) operations per token.</li>
+          <li>But inference accumulates state across tokens.</li>
+        </ul>
+
+        <p>And that state has a name: <strong>the KV cache</strong>.</p>
+
+        <h2>The KV cache: where inference meets its own bottleneck</h2>
+
+        <p>During autoregressive generation, each new token computes its Q, K, and V vectors. The new token's Q attends to <strong>all</strong> previously computed K and V vectors. This means the model must store all K and V vectors for all previous tokens across all heads in all layers.</p>
+
+        <p>For a sequence length $n$, the KV cache size for a single layer is:</p>
+
+        <p><strong>Size = 2 × n × h × d</strong></p>
+
+        <p>For a LLaMA-like model (h = 32, d = 128, n = 4096), this comes out to roughly <strong>134 MB per layer</strong>. With 32 layers, that's more than <strong>4 GB</strong> just for the KV cache.</p>
+
+        <p>This is why inference is often memory-bound before it is compute-bound. It's also why techniques like Multi-Query Attention, Grouped-Query Attention, and PagedAttention exist at all—they dramatically shrink the KV cache footprint and make inference feasible on real hardware.</p>
+
+        <h2>When attention fails completely</h2>
+
+        <p>At very long context lengths, naive attention simply stops being usable.</p>
+
+        <p>Consider a sequence length of 32,000 tokens. The attention matrix alone contains:</p>
+
+        <div class="math-display">
+          $$(32{,}000)^2 = 1.024 \times 10^9 \text{ elements}$$
+        </div>
+
+        <p>At FP16, storing this matrix takes roughly <strong>2 gigabytes</strong>. That is for the attention scores alone—not the gradients, not Q/K/V, not the softmax output.</p>
+
+        <p>And this must be computed for every head in every layer. No GPU can sustainably handle this load.</p>
+
+        <p>This is where FlashAttention enters the story. FlashAttention avoids ever materializing the full attention matrix. Instead, it splits the computation into small tiles that fit entirely in fast on-chip memory, streams through the sequence in a single pass, and performs softmax in a numerically stable way without needing the full matrix.</p>
+
+        <p>It does the same math, but it does it in a way the hardware likes.</p>
+
+        <h2>The core message</h2>
+
+        <p>If you boil everything down, the lesson is embarrassingly simple:</p>
+
+        <p><strong>Naive attention does too much work, and it does that work in the slowest part of the GPU.</strong></p>
+
+        <p>Everything else—KV cache, MQA, GQA, FlashAttention, PagedAttention, long-context transformers, efficient kernels—is just the universe's attempt to undo or mitigate that mistake.</p>
+
+        <h2>Where we go from here</h2>
+
+        <p>Now that you understand the bottleneck, we are ready for the next two parts.</p>
+
+        <h3>Article 2: The KV Cache, Multi-Query Attention, and Grouped-Query Attention</h3>
+        <p>Why inference is bottlenecked by memory, not compute. How to reduce KV cache size by 8× to 64×. Why every modern LLM uses GQA.</p>
+
+        <h3>Article 3: FlashAttention and IO-Aware Attention</h3>
+        <p>Why naive attention is memory-bound. How tiling in shared memory changes everything. The internal mechanics of FlashAttention v1 → v3. What "attention without the attention matrix" really means.</p>
+      </div>
+      
+      <footer class="blog-footer">
+        <a href="../index.html#blog" class="blog-footer-link">
+          <ion-icon name="arrow-back"></ion-icon>
+          <span>Back to all posts</span>
+        </a>
+      </footer>
+    </article>
+  </div>
+  
+  <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+  
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    }
+    
+    window.addEventListener('scroll', () => {
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const scrolled = (window.scrollY / docHeight) * 100;
+      document.getElementById('reading-progress').style.width = scrolled + '%';
+    });
+    
+    document.addEventListener('DOMContentLoaded', () => { hljs.highlightAll(); });
+  </script>
+  
+  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+</body>
+</html>

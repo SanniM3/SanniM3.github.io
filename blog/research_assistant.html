@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Designing a Multi-Agent Deep Research System | Mardhiyah Sanni</title>
+  <meta name="description" content="A deep dive into building AI systems for academic survey writing">
+  
+  <link rel="shortcut icon" href="../assets/images/favicon.ico" type="image/x-icon">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="../assets/css/main.css">
+  
+  <!-- Theme Initialization -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>
+<body>
+  <div class="blog-wrapper">
+    <div class="reading-progress" id="reading-progress"></div>
+    
+    <nav class="blog-nav">
+      <div class="blog-nav-inner">
+        <a href="../index.html" class="blog-back-link">
+          <ion-icon name="arrow-back"></ion-icon>
+          <span>Back to Home</span>
+        </a>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+          <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </nav>
+    
+    <article class="blog-article">
+      <header class="blog-header">
+        <span class="blog-header-category">Applications</span>
+        <h1 class="blog-header-title">Designing a Multi-Agent Deep Research System</h1>
+        <div class="blog-header-meta">
+          <div class="blog-header-meta-item">
+            <ion-icon name="time-outline"></ion-icon>
+            <span>18 min read</span>
+          </div>
+        </div>
+      </header>
+      
+      <figure class="blog-banner">
+        <img src="../assets/images/research_assistant.png" alt="Multi-Agent Research System" loading="lazy">
+      </figure>
+      
+      <div class="blog-content">
+        <h2>Introduction</h2>
+        <p>Conducting a comprehensive literature survey is a time-consuming and cognitively demanding task. Traditionally, researchers must manually search through numerous sources, sift information, take extensive notes, and synthesize findings into a cohesive review - a process that can lead to information overload and fatigue. Often, due to time constraints, literature reviews end up covering only surface-level information instead of deeply analyzing all relevant perspectives. This challenge has grown acute with the explosion of scientific publications, making it difficult to keep surveys up-to-date and thorough.</p>
+
+        <p><strong>Deep research</strong> is a paradigm shift aimed at overcoming these limitations by moving beyond time-consuming and sometimes superficial gathering to achieve <em>profound understanding</em>. A deep-research approach involves iterative exploration that progressively searches for knowledge, continuous reflection on the completeness and quality of information, and synthesis across multiple sources to form cohesive insights (rather than isolated facts). The goal is to maintain focus on the central research questions while ensuring breadth and depth of coverage, yielding a survey that reveals connections and implications often missed by cursory reviews.</p>
+
+        <p>Advances in AI now offer the possibility of automating this deep research process. Rather than a single AI answering questions with quick replies, one can design a <em>research assistant</em> that produces lengthy, well-researched, and cited outputs. Users are willing to tolerate longer response times if it means receiving a detailed, evidence-backed survey of a topic, hence, opening the door for multi-step pipelines where AI agents search academic databases, read papers, and compile findings into a structured literature review.</p>
+
+        <p>In this article, I'll outline the design of a multi-agent deep research system for writing academic survey papers. The target audience includes researchers and system architects interested in leveraging large language models (LLMs) and retrieval frameworks to automate rigorous literature reviews. The focus is on high-level architecture and methodology rather than low-level code, drawing on recent frameworks (e.g. LangGraph) and techniques like Retrieval-Augmented Generation (RAG) to ensure the system is both practical and academically grounded.</p>
+
+        <h2>Deep Research via Multi‑Agent Collaboration</h2>
+        <p>To emulate a thorough human researcher, a single monolithic AI is often insufficient due to the complexity and scale of the task. Instead, <strong>multi-agent systems</strong> divide the work among specialized agents that collaborate on different aspects of the research and writing process. By decomposing the complex task of literature surveying into smaller, manageable subtasks handled by different agents, the system can tackle intricacies in parallel and apply specialized strategies for each part. This division of labor not only improves scalability but also helps mitigate errors like factual hallucinations, since agents can cross-verify information and focus on specific subtasks with greater accuracy.</p>
+
+        <p>Each agent in the system is an LLM (or a set of LLM tools) tuned for a particular role. For example, one agent may specialize in searching academic databases, another in summarizing papers, another in drafting text, and yet another in reviewing the draft for quality. This approach mirrors the human cognitive strategy of breaking down complex problems into steps. In fact, a recent multi-agent framework called <strong>LiRA (Literature Review Agents)</strong> explicitly emulates the human literature review process by using specialized agents for content outlining, subsection writing, editing, and reviewing, which together produce cohesive and comprehensive review articles.</p>
+
+        <p>A cornerstone of enabling deep research in such a system is integrating <strong>Retrieval-Augmented Generation (RAG)</strong>. LLMs on their own have finite context windows and a fixed training knowledge cutoff, which limit their ability to handle extensive, up-to-date information. RAG techniques address this by coupling LLMs with external information retrieval: the system searches for relevant documents and injects retrieved content into the prompt, grounding the generation in current, factual sources. In our context, RAG allows the research assistant to draw from an ever-growing knowledge base of literature, ensuring that the survey it writes is backed by sources beyond the LLM's built-in knowledge.</p>
+
+        <h2>Multi‑Agent Deep Research Workflow</h2>
+        <p>To build a deep-research assistant that can author academic survey papers, we design a pipeline of interacting agents that mirrors the stages of human literature review. The pipeline is iterative and adaptive, meaning later steps can loop back or request new information from earlier steps as needed. Below we outline the key stages of this workflow.</p>
+
+        <h3>Stage 1: Clarifying the Query and Planning the Survey Structure</h3>
+        <p>The process begins with the system ingesting the user's query or topic for the survey. At this stage, it is crucial to clarify and scope the research problem. A front-end agent may engage in a brief dialogue with the user to refine ambiguous questions or to narrow broad topics (a human-in-the-loop step for defining boundaries). Once the topic is well-defined, the system formulates an initial research plan. This often involves generating an outline of the survey – essentially hypothesizing what major sections or themes the literature review should contain.</p>
+
+        <p>A dedicated <em>Outline Planner</em> agent handles this planning. Given the user's topic, this agent proposes a structured outline consisting of main sections and subsections to cover. For example, if the query is about advances in natural language processing, the outline might include sections on language modeling, evaluation techniques, applications, etc.</p>
+
+        <h3>Stage 2: Information Retrieval and Knowledge Base Construction</h3>
+        <p>With a clear structure in hand, the system moves on to <strong>gathering the relevant literature and data</strong>. This stage is handled by one or more <em>Search and Retrieval agents</em>, which scour external sources for information pertinent to each section of the outline. Two complementary retrieval strategies are employed:</p>
+
+        <ul>
+          <li><strong>Academic Paper Search:</strong> One agent focuses on scientific publications, querying academic databases and preprint servers (like arXiv) for papers related to the topic.</li>
+          <li><strong>General Web and Domain-Specific Search:</strong> Another agent performs a broad web search for supplementary material – this could include survey articles, blog posts, technical reports, or even relevant Wikipedia pages.</li>
+        </ul>
+
+        <p>The <strong>knowledge base</strong> built in this stage acts as the extended memory of our system. Typically, it is implemented as a combination of a document store and a vector index, enabling semantic search through those documents via embeddings.</p>
+
+        <h3>Stage 3: Reflective Iteration – Identifying Gaps and Deepening Research</h3>
+        <p>A defining feature of deep research is the <strong>iterative refinement</strong> of knowledge. After the initial round of searches, the system enters a reflection phase to evaluate how complete and well-grounded the gathered information is. This is where a <em>Reflection Agent</em> comes into play, assessing the knowledge base and identifying gaps or weaknesses.</p>
+
+        <p>What sets this system apart is its capacity to <strong>generate new search queries based on identified gaps</strong>. If a deficiency is found, the Query Generation agent formulates targeted queries to address it. These new queries are fed back to the Search agents, triggering additional retrieval focused on the missing pieces.</p>
+
+        <h3>Stage 4: Drafting the Survey with Retrieval-Augmented Generation</h3>
+        <p>Having amassed a robust base of knowledge, the next step is to actually <strong>write the survey paper</strong>. This task is handled by <em>Writing agents</em> that use the power of LLMs to generate text, but crucially, they do so by leveraging the collected references via RAG.</p>
+
+        <p>Each section is generated independently, avoiding the pitfall of trying to have the model write a lengthy survey in one go. By focusing on one topic at a time with relevant context, the writing agent can produce in-depth content with proper citations.</p>
+
+        <h3>Stage 5: Review and Refinement (Automated Peer Review)</h3>
+        <p>In the final stage, the system performs an automated <strong>peer-review-style evaluation</strong> of the draft and then refines it based on the feedback. A dedicated <em>Reviewer agent</em> reads the draft and evaluates it along several key dimensions:</p>
+
+        <ul>
+          <li><strong>Content completeness:</strong> Has the draft covered all important areas outlined in the plan?</li>
+          <li><strong>Clarity and organization:</strong> Do the arguments flow logically?</li>
+          <li><strong>Accuracy and support:</strong> Are factual claims verified against the sources?</li>
+          <li><strong>Citation quality:</strong> Are all quotations and specific data points properly cited?</li>
+          <li><strong>Writing quality and style:</strong> Does the text read professionally?</li>
+        </ul>
+
+        <p>After the evaluation, the Reviewer agent produces a feedback report. A <em>Revision agent</em> then takes this feedback and addresses each point. This cycle of review → feedback → revise can repeat for a couple of iterations until the draft meets the desired quality threshold.</p>
+
+        <h2>Implementation Considerations</h2>
+        <p>The multi-agent system described can be implemented with today's AI technologies by leveraging existing frameworks. Each agent is essentially an LLM prompt designed for a specific subtask, possibly with some lightweight programming around it.</p>
+
+        <p>To manage this orchestrated workflow, frameworks like <strong>LangChain/LangGraph</strong> or <strong>DSPy</strong> can be invaluable. They allow developers to define a directed graph of nodes (agents/tools) with data passing between them, implementing control flow logic for the iterative processes.</p>
+
+        <h3>Knowledge Base and RAG</h3>
+        <p>The selection of the vector database and embedding model will affect the retrieval quality. FAISS, Pinecone, or Qdrant are popular choices, with appropriate embedding models for semantic search on academic text. The knowledge base can chunk each paper into paragraphs and embed those, so retrieval pulls only the relevant chunks.</p>
+
+        <h3>Parallelism and Efficiency</h3>
+        <p>Because a literature survey can easily involve dozens of sources and lengthy text generation, efficiency considerations are key. Multi-agent pipelines can be parallelized where possible – different sections' writing agents can work simultaneously since they don't depend on each other's output.</p>
+
+        <h2>Conclusion</h2>
+        <p>Designing a deep research assistant with multiple LLM-based agents offers a promising solution to the problem of keeping literature surveys comprehensive and up-to-date. By dividing the task into specialized roles – planning, searching, reading, writing, and reviewing – the system can emulate the thoroughness of a human researcher while leveraging the speed and breadth of AI.</p>
+
+        <p>Key to this approach is the integration of a <strong>knowledge base and retrieval mechanism (RAG)</strong>, which grounds the generation in factual, current information and extends the effective memory of the LLM. The iterative reflect-and-refine loop ensures that gaps are filled and the content is validated.</p>
+
+        <p>Early implementations like <strong>LiRA</strong> demonstrate that such agentic workflows can produce literature reviews of notable quality, sometimes even surpassing previous single-model methods in coherence and citation accuracy. As LLMs and agent frameworks continue to evolve, we can expect these systems to become more reliable and integrated with human workflows — ultimately making scholarly research more accessible and efficient without sacrificing depth or rigor.</p>
+      </div>
+      
+      <footer class="blog-footer">
+        <a href="../index.html#blog" class="blog-footer-link">
+          <ion-icon name="arrow-back"></ion-icon>
+          <span>Back to all posts</span>
+        </a>
+      </footer>
+    </article>
+  </div>
+  
+  <!-- Scripts -->
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    }
+    
+    window.addEventListener('scroll', () => {
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const scrolled = (window.scrollY / docHeight) * 100;
+      document.getElementById('reading-progress').style.width = scrolled + '%';
+    });
+  </script>
+  
+  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+</body>
+</html>
