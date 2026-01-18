@@ -104,13 +104,7 @@
 
         <p>The trouble begins when we stop admiring the idea and start counting operations.</p>
 
-        <p>If the sequence has length $n$, and the model has $h$ heads, each of dimension $d$, then forming the matrix $QK^T$ involves computing $h$ matrices of shape $n \times n$, each cell containing a dot product over a $d$-dimensional space. The total work is on the order of:</p>
-
-        <p><strong>O(h n² d)</strong></p>
-
-        <p>and the memory footprint of those matrices is:</p>
-
-        <p><strong>O(h n²)</strong></p>
+        <p>If the sequence has length $n$, and the model has $h$ heads, each of dimension $d$, then forming the matrix $QK^T$ involves computing $h$ matrices of shape $n \times n$, each cell containing a dot product over a $d$-dimensional space. The total work is on the order of $O(hn^2d)$and the memory footprint of those matrices is $O(hn^2)$. </p>
 
         <p>It is this $n^2$ that causes everything downstream to break. Nothing else in the Transformer scales so aggressively with sequence length—not the feed-forward networks, not the projections, not the embeddings. Attention is the only part of the architecture where doubling the sequence length squares the work.</p>
 
