@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  
+  <title>{{ page.title }} | {{ site.title }}</title>
+  <meta name="description" content="{{ page.description | default: page.excerpt | strip_html | truncate: 160 }}">
+  
+  <!-- Open Graph / Social -->
+  <meta property="og:title" content="{{ page.title }}">
+  <meta property="og:description" content="{{ page.description | default: page.excerpt | strip_html | truncate: 160 }}">
+  <meta property="og:type" content="article">
+  
+  <!-- Favicon -->
+  <link rel="shortcut icon" href="{{ '/assets/images/favicon.ico' | relative_url }}" type="image/x-icon">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="{{ '/assets/css/main.css' | relative_url }}">
+  
+  <!-- Syntax Highlighting - GitHub Dark Theme -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  
+  <!-- MathJax for equations -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      },
+      options: {
+        skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  
+  <!-- Theme initialization -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+  
+  <style>
+    /* Blog post specific styles */
+    .blog-post-wrapper {
+      min-height: 100vh;
+      background: var(--bg-primary);
+    }
+    
+    .blog-post-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-primary);
+      padding: var(--space-md) var(--space-lg);
+    }
+    
+    .blog-post-nav-inner {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .blog-post-back {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-sm);
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+      transition: color var(--transition-fast);
+    }
+    
+    .blog-post-back:hover {
+      color: var(--accent-primary);
+    }
+    
+    .blog-post-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: var(--space-2xl) var(--space-lg);
+    }
+    
+    .blog-post-header {
+      margin-bottom: var(--space-2xl);
+      padding-bottom: var(--space-xl);
+      border-bottom: 1px solid var(--border-primary);
+    }
+    
+    .blog-post-category {
+      display: inline-block;
+      font-size: var(--text-xs);
+      font-weight: 500;
+      color: var(--accent-primary);
+      background: var(--accent-glow);
+      padding: var(--space-xs) var(--space-md);
+      border-radius: var(--radius-full);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: var(--space-md);
+    }
+    
+    .blog-post-title {
+      font-size: var(--text-3xl);
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: var(--space-lg);
+      color: var(--text-primary);
+    }
+    
+    .blog-post-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-lg);
+      font-size: var(--text-sm);
+      color: var(--text-tertiary);
+    }
+    
+    .blog-post-meta-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+    
+    .blog-post-meta-item ion-icon {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+    }
+    
+    /* Code blocks with copy button and language label */
+    .code-block-wrapper {
+      position: relative;
+      margin: var(--space-xl) 0;
+    }
+    
+    .code-block-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #161b22;
+      border: 1px solid var(--code-border);
+      border-bottom: none;
+      border-radius: var(--radius-md) var(--radius-md) 0 0;
+      padding: var(--space-sm) var(--space-md);
+    }
+    
+    .code-block-lang {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .code-copy-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: #8b949e;
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: var(--radius-sm);
+      transition: all var(--transition-fast);
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+    
+    .code-copy-btn:hover {
+      color: #f0f6fc;
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .code-copy-btn.copied {
+      color: var(--success);
+    }
+    
+    .code-block-wrapper pre {
+      margin: 0 !important;
+      border-radius: 0 0 var(--radius-md) var(--radius-md) !important;
+      border-top: none !important;
+    }
+    
+    /* Override highlight.js styles */
+    .hljs {
+      background: #0d1117 !important;
+      padding: var(--space-lg) !important;
+      border: 1px solid var(--code-border);
+      border-top: none;
+      border-radius: 0 0 var(--radius-md) var(--radius-md);
+      font-size: var(--text-sm);
+      line-height: 1.7;
+    }
+    
+    /* Inline code */
+    .blog-post-content :not(pre) > code {
+      font-family: var(--font-mono);
+      font-size: 0.9em;
+      background: var(--bg-tertiary);
+      padding: 2px 8px;
+      border-radius: var(--radius-sm);
+      color: var(--highlight);
+      border: 1px solid var(--border-primary);
+    }
+    
+    /* Reading progress bar */
+    .reading-progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+      z-index: 1000;
+      transition: width 100ms ease-out;
+    }
+    
+    /* Theme toggle button */
+    .theme-toggle-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-md);
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      transition: all var(--transition-fast);
+      border: none;
+      cursor: pointer;
+    }
+    
+    .theme-toggle-btn:hover {
+      color: var(--highlight);
+      background: var(--bg-elevated);
+    }
+    
+    .theme-toggle-btn ion-icon {
+      font-size: 1.25rem;
+    }
+    
+    [data-theme="dark"] .icon-sun { display: block; }
+    [data-theme="dark"] .icon-moon { display: none; }
+    [data-theme="light"] .icon-sun { display: none; }
+    [data-theme="light"] .icon-moon { display: block; }
+    
+    /* Footer */
+    .blog-post-footer {
+      margin-top: var(--space-3xl);
+      padding-top: var(--space-xl);
+      border-top: 1px solid var(--border-primary);
+    }
+    
+    .back-to-blog {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-sm);
+      color: var(--accent-primary);
+      font-weight: 500;
+      transition: all var(--transition-fast);
+    }
+    
+    .back-to-blog:hover {
+      gap: var(--space-md);
+    }
+  </style>
+</head>
+<body>
+  <div class="blog-post-wrapper">
+    <!-- Reading Progress Bar -->
+    <div class="reading-progress" id="reading-progress"></div>
+    
+    <!-- Navigation -->
+    <nav class="blog-post-nav">
+      <div class="blog-post-nav-inner">
+        <a href="{{ '/' | relative_url }}" class="blog-post-back">
+          <ion-icon name="arrow-back"></ion-icon>
+          <span>Back to Home</span>
+        </a>
+        
+        <button class="theme-toggle-btn" onclick="toggleTheme()" aria-label="Toggle theme">
+          <ion-icon name="sunny-outline" class="icon-sun"></ion-icon>
+          <ion-icon name="moon-outline" class="icon-moon"></ion-icon>
+        </button>
+      </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <article class="blog-post-container">
+      <header class="blog-post-header">
+        {% if page.category %}
+        <span class="blog-post-category">{{ page.category }}</span>
+        {% endif %}
+        
+        <h1 class="blog-post-title">{{ page.title }}</h1>
+        
+        <div class="blog-post-meta">
+          {% if page.date %}
+          <div class="blog-post-meta-item">
+            <ion-icon name="calendar-outline"></ion-icon>
+            <time datetime="{{ page.date | date_to_xmlschema }}">
+              {{ page.date | date: "%B %d, %Y" }}
+            </time>
+          </div>
+          {% endif %}
+          
+          <div class="blog-post-meta-item">
+            <ion-icon name="time-outline"></ion-icon>
+            <span>{{ content | number_of_words | divided_by: 200 | plus: 1 }} min read</span>
+          </div>
+        </div>
+      </header>
+      
+      <div class="blog-post-content">
+        {{ content }}
+      </div>
+      
+      <footer class="blog-post-footer">
+        <a href="{{ '/' | relative_url }}#blog" class="back-to-blog">
+          <ion-icon name="arrow-back"></ion-icon>
+          <span>Back to all posts</span>
+        </a>
+      </footer>
+    </article>
+  </div>
+  
+  <!-- Highlight.js for syntax highlighting -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/sql.min.js"></script>
+  
+  <script>
+    // Theme toggle
+    function toggleTheme() {
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    }
+    
+    // Reading progress bar
+    window.addEventListener('scroll', () => {
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const scrolled = (window.scrollY / docHeight) * 100;
+      document.getElementById('reading-progress').style.width = scrolled + '%';
+    });
+    
+    // Wrap code blocks with header and copy button
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initialize highlight.js
+      hljs.highlightAll();
+      
+      // Add copy buttons to code blocks
+      document.querySelectorAll('pre code').forEach((block) => {
+        const pre = block.parentElement;
+        
+        // Skip if already wrapped
+        if (pre.parentElement.classList.contains('code-block-wrapper')) return;
+        
+        // Detect language
+        const langClass = [...block.classList].find(c => c.startsWith('language-'));
+        const lang = langClass ? langClass.replace('language-', '') : 'code';
+        
+        // Create wrapper
+        const wrapper = document.createElement('div');
+        wrapper.className = 'code-block-wrapper';
+        
+        // Create header
+        const header = document.createElement('div');
+        header.className = 'code-block-header';
+        header.innerHTML = `
+          <span class="code-block-lang">${lang}</span>
+          <button class="code-copy-btn" onclick="copyCode(this)">
+            <ion-icon name="copy-outline"></ion-icon>
+            <span>Copy</span>
+          </button>
+        `;
+        
+        // Wrap the pre element
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(header);
+        wrapper.appendChild(pre);
+      });
+    });
+    
+    // Copy code function
+    function copyCode(button) {
+      const wrapper = button.closest('.code-block-wrapper');
+      const code = wrapper.querySelector('code').textContent;
+      
+      navigator.clipboard.writeText(code).then(() => {
+        button.classList.add('copied');
+        button.querySelector('span').textContent = 'Copied!';
+        button.querySelector('ion-icon').setAttribute('name', 'checkmark-outline');
+        
+        setTimeout(() => {
+          button.classList.remove('copied');
+          button.querySelector('span').textContent = 'Copy';
+          button.querySelector('ion-icon').setAttribute('name', 'copy-outline');
+        }, 2000);
+      });
+    }
+  </script>
+  
+  <!-- Ionicons -->
+  <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
+</body>
+</html>
