@@ -1,1362 +1,690 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mardhiyah Sanni - Personal Portfolio</title>
-
-  <!--
-    - favicon
-  -->
-  <link rel="shortcut icon" href="./assets/images/favicon.ico" type="image/x-icon">
-
-  <!--
-    - custom css link
-  -->
-  <link rel="stylesheet" href="./assets/css/style.css">
-
-  <!--
-    - google font link
-  -->
+  <meta name="description" content="Mardhiyah Sanni - AI Research Engineer specializing in NLP, Speech Recognition, and Large Language Models">
+  <meta name="keywords" content="AI, Machine Learning, NLP, Speech Recognition, LLM, Research">
+  <title>Mardhiyah Sanni | AI Research Engineer</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="./assets/images/favicon.ico">
+  
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  
+  <!-- Icons -->
+  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="./assets/css/main.css">
 </head>
-
 <body>
-
-  <!--
-    - #MAIN
-  -->
-
-  <main>
-
-    <!--
-      - #SIDEBAR
-    -->
-
-    <aside class="sidebar" data-sidebar>
-
-      <div class="sidebar-info">
-
-        <figure class="avatar-box">
-          <img src="./images/profile.jpeg" alt="Mardhiyah Sanni" width="80">
-        </figure>
-
-        <div class="info-content">
-          <h1 class="name" title="Mardhiyah Sanni">Mardhiyah Sanni</h1>
-
-          <p class="title">AI Research Engineer</p>
+  <div class="site-container">
+    <!-- ==================== SIDEBAR ==================== -->
+    <aside class="sidebar">
+      <div class="sidebar-inner">
+        <!-- Profile -->
+        <div class="profile">
+          <figure class="profile-image">
+            <img src="./images/profile.jpeg" alt="Mardhiyah Sanni">
+          </figure>
+          <h1 class="profile-name">Mardhiyah Sanni</h1>
+          <span class="profile-role">AI Research Engineer</span>
         </div>
-
-        <button class="info_more-btn" data-sidebar-btn>
-          <span>Show Contacts</span>
-
-          <ion-icon name="chevron-down"></ion-icon>
-        </button>
-
-      </div>
-
-      <div class="sidebar-info_more">
-
-        <div class="separator"></div>
-
-        <ul class="contacts-list">
-
+        
+        <!-- Contact List -->
+        <ul class="contact-list">
           <li class="contact-item">
-
-            <div class="icon-box">
+            <div class="contact-icon">
               <ion-icon name="mail-outline"></ion-icon>
             </div>
-
-            <div class="contact-info">
-              <p class="contact-title">Email</p>
-
-              <a href="mailto:sannimardhiyah@gmail.com" class="contact-link">sannimardhiyah@gmail.com</a>
+            <div class="contact-content">
+              <span class="contact-label">Email</span>
+              <span class="contact-value">
+                <a href="mailto:sannimardhiyah@gmail.com">sannimardhiyah@gmail.com</a>
+              </span>
             </div>
-
           </li>
-
           <li class="contact-item">
-
-            <div class="icon-box">
-              <ion-icon name="phone-portrait-outline"></ion-icon>
-            </div>
-
-            <!-- <div class="contact-info">
-              <p class="contact-title">Phone</p>
-
-              <a href="tel:+447879132106" class="contact-link">+447879132106</a>
-            </div> -->
-
-          </li>
-
-          
-
-          <li class="contact-item">
-
-            <div class="icon-box">
+            <div class="contact-icon">
               <ion-icon name="location-outline"></ion-icon>
             </div>
-
-            <div class="contact-info">
-              <p class="contact-title">Location</p>
-
-              <address>Edinburgh, United Kingdom</address>
+            <div class="contact-content">
+              <span class="contact-label">Location</span>
+              <span class="contact-value">Edinburgh, United Kingdom</span>
             </div>
-
           </li>
-
         </ul>
-
-        <div class="separator"></div>
-
-        <ul class="social-list">
-
-          <li class="social-item">
-            <a href="https://github.com/SanniM3" class="social-link">
-              <ion-icon name="logo-github"></ion-icon>
-            </a>
-          </li>
-
-          
-
-          <li class="social-item">
-            <a href="https://www.linkedin.com/in/mardhiyah-sanni/" class="social-link">
-              <ion-icon name="logo-linkedin"></ion-icon>
-            </a>
-          </li>
-
-        </ul>
-
+        
+        <!-- Social Links -->
+        <div class="social-links">
+          <a href="https://github.com/SanniM3" class="social-link" target="_blank" rel="noopener" aria-label="GitHub">
+            <ion-icon name="logo-github"></ion-icon>
+          </a>
+          <a href="https://www.linkedin.com/in/mardhiyah-sanni/" class="social-link" target="_blank" rel="noopener" aria-label="LinkedIn">
+            <ion-icon name="logo-linkedin"></ion-icon>
+          </a>
+          <a href="https://scholar.google.com/citations?user=YOUR_ID" class="social-link" target="_blank" rel="noopener" aria-label="Google Scholar">
+            <ion-icon name="school-outline"></ion-icon>
+          </a>
+        </div>
       </div>
-
     </aside>
 
-
-
-
-
-    <!--
-      - #main-content
-    -->
-
-    <div class="main-content">
-
-      <!--
-        - #NAVBAR
-      -->
-
-      <nav class="navbar">
-
-        <ul class="navbar-list">
-
-          <li class="navbar-item">
-            <button class="navbar-link  active" data-nav-link>About</button>
-          </li>
-
-          <li class="navbar-item">
-            <button class="navbar-link" data-nav-link>Resume</button>
-          </li>
-
-          <li class="navbar-item">
-            <button class="navbar-link" data-nav-link>Portfolio</button>
-          </li>
-
-          <li class="navbar-item">
-            <button class="navbar-link" data-nav-link>Blog</button>
-          </li>
-
-          <li class="navbar-item">
-            <button class="navbar-link" data-nav-link>Contact</button>
-          </li>
-
-        </ul>
-
+    <!-- ==================== MAIN CONTENT ==================== -->
+    <main class="main-content">
+      <!-- Navigation -->
+      <nav class="main-nav">
+        <div class="nav-inner">
+          <div class="nav-tabs">
+            <button class="nav-tab active" data-section="about">About</button>
+            <button class="nav-tab" data-section="resume">Resume</button>
+            <button class="nav-tab" data-section="portfolio">Portfolio</button>
+            <button class="nav-tab" data-section="blog">Blog</button>
+            <button class="nav-tab" data-section="contact">Contact</button>
+          </div>
+          <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+            <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+        </div>
       </nav>
 
-
-
-
-
-      <!--
-        - #ABOUT
-      -->
-
-      <article class="about  active" data-page="about">
-
-        <header>
-          <h2 class="h2 article-title">About me</h2>
-        </header>
-
-        <section class="about-text">
+      <!-- ==================== ABOUT SECTION ==================== -->
+      <section id="about" class="section active">
+        <h2 class="section-title">About Me</h2>
+        
+        <div class="about-intro">
           <p>
             I'm an AI Researcher and Engineer specialising in natural language processing, speech recognition, and large language models. My work spans building models from scratch, fine-tuning them for specialised domains, and designing evaluation methods that probe their various capabilities. I've contributed to published research at top venues and developed AI solutions that are in production. My goal is to carry this same blend of innovation and execution into my next role — advancing AI that is both powerful and responsible.
           </p>
-
           <p>
             I enjoy turning research into real-world systems — whether that's improving ASR performance for underrepresented accents, creating high-quality datasets, or building agentic AI systems that plan, reason, and take action across complex workflows. I approach problems with both scientific rigour and an engineering mindset, ensuring solutions are robust, scalable, and human-centred.
           </p>
-        </section>
-
-
-        <!--
-          - service
-        -->
-
-        <section class="service">
-
-          <h3 class="h3 service-title">What i'm doing</h3>
-
-          <ul class="service-list">
-
-            <li class="service-item">
-
-              <div class="service-icon-box">
-                <img src="./assets/images/icon-design.svg
-                " alt="design icon" width="40">
-              </div>
-
-              <div class="service-content-box">
-                <h4 class="h4 service-item-title">Model Design</h4>
-
-                <p class="service-item-text">
-                  Designing and evaluating NLP/ASR systems with strong reliability and safety considerations.
-                </p>
-              </div>
-
-            </li>
-
-            <li class="service-item">
-
-              <div class="service-icon-box">
-                <img src="./assets/images/icon-dev.svg" alt="Web development icon" width="40">
-              </div>
-
-              <div class="service-content-box">
-                <h4 class="h4 service-item-title">Applied Research</h4>
-
-                <p class="service-item-text">
-                  Translating research ideas into production-ready ML systems.
-                </p>
-              </div>
-
-            </li>
-
-            <li class="service-item">
-
-              <div class="service-icon-box">
-                <img src="./assets/images/icon-app.svg" alt="mobile app icon" width="40">
-              </div>
-
-              <div class="service-content-box">
-                <h4 class="h4 service-item-title">Agentic AI</h4>
-
-                <p class="service-item-text">
-                  Building multi-agent LLM workflows that plan, reason, and act.
-                </p>
-              </div>
-
-            </li>
-
-            <li class="service-item">
-
-              <div class="service-icon-box">
-                <img src="./assets/images/icon-photo.svg" alt="camera icon" width="40">
-              </div>
-
-              <div class="service-content-box">
-                <h4 class="h4 service-item-title">Dataset Curation</h4>
-
-                <p class="service-item-text">
-                  Creating and curating high-quality datasets focused on accent diversity and real-world use.
-                </p>
-              </div>
-
-            </li>
-
-          </ul>
-
-        </section>
-
-
-        <!--
-          - testimonials
-        -->
-
-        <!-- <section class="testimonials">
-
-          <h3 class="h3 testimonials-title">Testimonials</h3>
-
-          <ul class="testimonials-list has-scrollbar">
-
-            <li class="testimonials-item">
-              <div class="content-card" data-testimonials-item>
-
-                <figure class="testimonials-avatar-box">
-                  <img src="./assets/images/avatar-1.png" alt="Daniel lewis" width="60" data-testimonials-avatar>
-                </figure>
-
-                <h4 class="h4 testimonials-item-title" data-testimonials-title>Daniel lewis</h4>
-
-                <div class="testimonials-text" data-testimonials-text>
-                  <p>
-                    Richard was hired to create a corporate identity. We were very pleased with the work done. She has a
-                    lot of experience
-                    and is very concerned about the needs of client. Lorem ipsum dolor sit amet, ullamcous cididt
-                    consectetur adipiscing
-                    elit, seds do et eiusmod tempor incididunt ut laborels dolore magnarels alia.
-                  </p>
-                </div>
-
-              </div>
-            </li>
-
-            <li class="testimonials-item">
-              <div class="content-card" data-testimonials-item>
-
-                <figure class="testimonials-avatar-box">
-                  <img src="./assets/images/avatar-2.png" alt="Jessica miller" width="60" data-testimonials-avatar>
-                </figure>
-
-                <h4 class="h4 testimonials-item-title" data-testimonials-title>Jessica miller</h4>
-
-                <div class="testimonials-text" data-testimonials-text>
-                  <p>
-                    Richard was hired to create a corporate identity. We were very pleased with the work done. She has a
-                    lot of experience
-                    and is very concerned about the needs of client. Lorem ipsum dolor sit amet, ullamcous cididt
-                    consectetur adipiscing
-                    elit, seds do et eiusmod tempor incididunt ut laborels dolore magnarels alia.
-                  </p>
-                </div>
-
-              </div>
-            </li>
-
-            <li class="testimonials-item">
-              <div class="content-card" data-testimonials-item>
-
-                <figure class="testimonials-avatar-box">
-                  <img src="./assets/images/avatar-3.png" alt="Emily evans" width="60" data-testimonials-avatar>
-                </figure>
-
-                <h4 class="h4 testimonials-item-title" data-testimonials-title>Emily evans</h4>
-
-                <div class="testimonials-text" data-testimonials-text>
-                  <p>
-                    Richard was hired to create a corporate identity. We were very pleased with the work done. She has a
-                    lot of experience
-                    and is very concerned about the needs of client. Lorem ipsum dolor sit amet, ullamcous cididt
-                    consectetur adipiscing
-                    elit, seds do et eiusmod tempor incididunt ut laborels dolore magnarels alia.
-                  </p>
-                </div>
-
-              </div>
-            </li>
-
-            <li class="testimonials-item">
-              <div class="content-card" data-testimonials-item>
-
-                <figure class="testimonials-avatar-box">
-                  <img src="./assets/images/avatar-4.png" alt="Henry william" width="60" data-testimonials-avatar>
-                </figure>
-
-                <h4 class="h4 testimonials-item-title" data-testimonials-title>Henry william</h4>
-
-                <div class="testimonials-text" data-testimonials-text>
-                  <p>
-                    Richard was hired to create a corporate identity. We were very pleased with the work done. She has a
-                    lot of experience
-                    and is very concerned about the needs of client. Lorem ipsum dolor sit amet, ullamcous cididt
-                    consectetur adipiscing
-                    elit, seds do et eiusmod tempor incididunt ut laborels dolore magnarels alia.
-                  </p>
-                </div>
-
-              </div>
-            </li>
-
-          </ul>
-
-        </section>
- -->
-
-        <!--
-          - testimonials modal
-        -->
-
-        <div class="modal-container" data-modal-container>
-
-          <div class="overlay" data-overlay></div>
-
-          <section class="testimonials-modal">
-
-            <button class="modal-close-btn" data-modal-close-btn>
-              <ion-icon name="close-outline"></ion-icon>
-            </button>
-
-            <div class="modal-img-wrapper">
-              <figure class="modal-avatar-box">
-                <img src="./assets/images/avatar-1.png" alt="Daniel lewis" width="80" data-modal-img>
-              </figure>
-
-              <img src="./assets/images/icon-quote.svg" alt="quote icon">
-            </div>
-
-            <div class="modal-content">
-
-              <h4 class="h3 modal-title" data-modal-title>Daniel lewis</h4>
-
-              <time datetime="2021-06-14">14 June, 2021</time>
-
-              <div data-modal-text>
-                <p>
-                  Richard was hired to create a corporate identity. We were very pleased with the work done. She has a
-                  lot of experience
-                  and is very concerned about the needs of client. Lorem ipsum dolor sit amet, ullamcous cididt
-                  consectetur adipiscing
-                  elit, seds do et eiusmod tempor incididunt ut laborels dolore magnarels alia.
-                </p>
-              </div>
-
-            </div>
-
-          </section>
-
         </div>
 
-
-        <!--
-          - clients
-        -->
-
-        <!-- <section class="clients">
-
-          <h3 class="h3 clients-title">Clients</h3>
-
-          <ul class="clients-list has-scrollbar">
-
-            <li class="clients-item">
-              <a href="#">
-                <img src="./assets/images/logo-1-color.png" alt="client logo">
-              </a>
-            </li>
-
-            <li class="clients-item">
-              <a href="#">
-                <img src="./assets/images/logo-2-color.png" alt="client logo">
-              </a>
-            </li>
-
-            <li class="clients-item">
-              <a href="#">
-                <img src="./assets/images/logo-3-color.png" alt="client logo">
-              </a>
-            </li>
-
-            <li class="clients-item">
-              <a href="#">
-                <img src="./assets/images/logo-4-color.png" alt="client logo">
-              </a>
-            </li>
-
-            <li class="clients-item">
-              <a href="#">
-                <img src="./assets/images/logo-5-color.png" alt="client logo">
-              </a>
-            </li>
-
-            <li class="clients-item">
-              <a href="#">
-                <img src="./assets/images/logo-6-color.png" alt="client logo">
-              </a>
-            </li>
-
-          </ul>
-
-        </section> -->
-
-      </article>
-
-
-
-
-
-      <!--
-        - #RESUME
-      -->
-
-      <article class="resume" data-page="resume">
-
-        <header>
-          <h2 class="h2 article-title">Resume</h2>
-        </header>
-
-        <section class="timeline">
-
-          <div class="title-wrapper">
-            <div class="icon-box">
-              <ion-icon name="book-outline"></ion-icon>
+        <h3 class="services-title">What I'm Doing</h3>
+        
+        <div class="services-grid">
+          <div class="service-card">
+            <div class="service-icon">
+              <img src="./assets/images/icon-design.svg" alt="Model Design">
             </div>
-
-            <h3 class="h3">Education</h3>
+            <h4 class="service-title">Model Design</h4>
+            <p class="service-desc">Designing and evaluating NLP/ASR systems with strong reliability and safety considerations.</p>
           </div>
+          
+          <div class="service-card">
+            <div class="service-icon">
+              <img src="./assets/images/icon-dev.svg" alt="Applied Research">
+            </div>
+            <h4 class="service-title">Applied Research</h4>
+            <p class="service-desc">Translating research ideas into production-ready ML systems.</p>
+          </div>
+          
+          <div class="service-card">
+            <div class="service-icon">
+              <img src="./assets/images/icon-app.svg" alt="Agentic AI">
+            </div>
+            <h4 class="service-title">Agentic AI</h4>
+            <p class="service-desc">Building multi-agent LLM workflows that plan, reason, and act.</p>
+          </div>
+          
+          <div class="service-card">
+            <div class="service-icon">
+              <img src="./assets/images/icon-photo.svg" alt="Dataset Curation">
+            </div>
+            <h4 class="service-title">Dataset Curation</h4>
+            <p class="service-desc">Creating and curating high-quality datasets focused on accent diversity and real-world use.</p>
+          </div>
+        </div>
+      </section>
 
-          <ol class="timeline-list">
+      <!-- ==================== RESUME SECTION ==================== -->
+      <section id="resume" class="section">
+        <h2 class="section-title">Resume</h2>
 
-            <li class="timeline-item">
-
-              <h4 class="h4 timeline-item-title">University of Edinburgh</h4>
-
-              <span>Sept. 2022 - Nov. 2023</span>
-
-              <p class="timeline-text">
+        <!-- Education -->
+        <div class="resume-block">
+          <h3 class="resume-block-title">
+            <ion-icon name="school-outline"></ion-icon>
+            Education
+          </h3>
+          
+          <div class="timeline">
+            <div class="timeline-item">
+              <h4 class="timeline-role">University of Edinburgh</h4>
+              <span class="timeline-date">Sept. 2022 — Nov. 2023</span>
+              <p class="timeline-desc">
                 MSc in Artificial Intelligence (Distinction). <br>
                 Coursework: Machine Learning; Natural Language Processing, Understanding and Generation; Reinforcement Learning; and Speech Processing. <br>
                 Dissertation: Joint prediction and explanation via parameter efficient finetuning strategies.<br>
               </p>
-
-            </li>
-
-            <li class="timeline-item">
-
-              <h4 class="h4 timeline-item-title">Obafemi Awolowo University</h4>
-
-              <span>May 2015 - Feb. 2020</span>
-
-              <p class="timeline-text">
+            </div>
+            
+            <div class="timeline-item">
+              <h4 class="timeline-role">Obafemi Awolowo University</h4>
+              <span class="timeline-date">May 2015 — Feb. 2020</span>
+              <p class="timeline-desc">
                 BSc in Electronic and Electrical Engineering (First Class Honours). <br>
                 
                 Thesis: Tomato Disease Identification using Deep Learning. <br>
                 
                 Awarded Best Graduating Student in Instrumentation and Control Option. <br>
               </p>
-
-            </li>
-
-            
-
-          </ol>
-
-        </section>
-
-        <section class="timeline">
-
-          <div class="title-wrapper">
-            <div class="icon-box">
-              <ion-icon name="book-outline"></ion-icon>
             </div>
-
-            <h3 class="h3">Experience</h3>
           </div>
+        </div>
 
-          <ol class="timeline-list">
-
-            <li class="timeline-item">
-
-              <h4 class="h4 timeline-item-title">Research Assistant, University of Edinburgh</h4>
-
-              <span>May 2025 - Present</span>
-
-              <p class="timeline-text">
+        <!-- Experience -->
+        <div class="resume-block">
+          <h3 class="resume-block-title">
+            <ion-icon name="briefcase-outline"></ion-icon>
+            Experience
+          </h3>
+          
+          <div class="timeline">
+            <div class="timeline-item">
+              <h4 class="timeline-role">Research Assistant, University of Edinburgh</h4>
+              <span class="timeline-date">May 2025 — Present</span>
+              <p class="timeline-desc">
                 Building multi-agent LLM systems for real-time, feedback-aware interactions. Researching multilingual latent-space reasoning and user preference elicitation in LLMs.
               </p>
-
-            </li>
-
-            <li class="timeline-item">
-
-              <h4 class="h4 timeline-item-title">ML Researcher, Intron Health</h4>
-
-              <span>Nov. 2023 - Apr. 2025</span>
-
-              <p class="timeline-text">
+            </div>
+            
+            <div class="timeline-item">
+              <h4 class="timeline-role">ML Researcher, Intron Health</h4>
+              <span class="timeline-date">Nov. 2023 — Apr. 2025</span>
+              <p class="timeline-desc">
                 Developed methods to mitigate hallucinations in generative ASR models; designed speech augmentation to improve robustness; led ethical development of the Afrispeech-Dialog dataset; explored LLMs for ASR transcript improvement.
               </p>
-
-            </li>
-
-            <li class="timeline-item">
-
-              <h4 class="h4 timeline-item-title">AI Engineer, RectLabs</h4>
-
-              <span>Jun. 2021 - Aug. 2022</span>
-
-              <p class="timeline-text">
-                Built client-specific computer vision solutions, conducted model optimization research, and authored technical content on AI.
-              </p>
-
-            </li>
-
-          </ol>
-
-        </section>
-
-        <section class="skill content-card">
-          <h3 class="h3 skills-title">Skills</h3>
-
-          <div class="skill-category">
-            <p class="skill-items">
-              <strong class="skill-category-title">Programming</strong>
-              Python, SQL, Matlab, Data Structures and Algorithms
-            </p>
-          </div>
-
-
-          <div class="skill-category">
-            <p class="skill-items">
-              <strong class="skill-category-title">Frameworks</strong>
-              Hugging Face, PyTorch, LangChain, LangGraph, NLTK, SpaCy, Scikit-learn, Keras, vLLM
-            </p>
-          </div>
-
-          <div class="skill-category">
-            <p class="skill-items">
-              <strong class="skill-category-title">Cloud Platforms</strong>
-              Amazon Web Services (AWS), Google Cloud Platform (GCP)
-            </p>
-          </div>
-
-          <div class="skill-category">
-            <p class="skill-items">
-              <strong class="skill-category-title">ML & AI</strong>
-              NLP, ASR, Sequence Modelling, Generative AI, RAG, LLMs, Computer Vision, Classification & Regression, Reinforcement Learning
-            </p>
-          </div>
-
-          <div class="skill-category">
-            <p class="skill-items">
-              <strong class="skill-category-title">Data Science</strong>
-              Exploratory Data Analysis, A/B Testing, Clustering, Time-Series Forecasting, Data Engineering
-            </p>
-          </div>
-
-          <div class="skill-category">
-            <p class="skill-items">
-              <strong class="skill-category-title">Personal</strong>
-              Analytical Problem-Solving, Communication, Teamwork, Leadership, Adaptability
-            </p>
-          </div>
-
-        </section>
-
-        <section class="awards content-card">
-          <h3 class="h3 awards-title">Awards &amp; Certifications</h3>
-
-          <div class="skill-category">
-            <h4 class="skill-category-title">Awards</h4>
-            <p class="skill-items">Best Social Impact Paper — Annual Conference of the Association for Computational Linguistics (2025)</p>
-            <p class="skill-items">Best Graduating Student in BSc Electronic and Electrical Engineering in Instrumentation and Control Option in the Department of
-Electronic and Electrical Engineering (Dec. 2021)</p>
-            <p class="skill-items">Outstanding MSc. Thesis Submission (Nov. 2023)</p>
-          </div>
-
-          <div class="skill-category">
-            <h4 class="skill-category-title">Certifications</h4>
-            <p class="skill-items">AI Safety Fundamentals: Alignment — BlueDot Impact (2025)</p>
-            <p class="skill-items">Natural Language Processing Specialization — Coursera (2023)</p>
-            <p class="skill-items">Predictive Analytics for Business Nanodegree — Udacity (2021)</p>
-            <p class="skill-items">Deep Learning Nanodegree — Udacity (2020)</p>
-          </div>
-        </section>
-
-
-      </article>
-
-
-
-
-
-      <!--
-        - #PORTFOLIO
-      -->
-
-      <article class="portfolio" data-page="portfolio">
-
-        <header>
-          <h2 class="h2 article-title">Portfolio</h2>
-        </header>
-
-        <section class="projects">
-
-          <ul class="filter-list">
-
-            <li class="filter-item">
-              <button class="active" data-filter-btn>All</button>
-            </li>
-
-            <li class="filter-item">
-              <button data-filter-btn>Applications</button>
-            </li>
-
-            <li class="filter-item">
-              <button data-filter-btn>Publications</button>
-            </li>
-
-            <li class="filter-item">
-              <button data-filter-btn>From Sratch Implementations</button>
-            </li>
-
-          </ul>
-
-          <div class="filter-select-box">
-
-            <button class="filter-select" data-select>
-
-              <div class="select-value" data-selecct-value>Select category</div>
-
-              <div class="select-icon">
-                <ion-icon name="chevron-down"></ion-icon>
-              </div>
-
-            </button>
-
-            <ul class="select-list">
-
-              <li class="select-item">
-                <button data-select-item>All</button>
-              </li>
-
-              <li class="select-item">
-                <button data-select-item>Applications</button>
-              </li>
-
-              <li class="select-item">
-                <button data-select-item>Publications</button>
-              </li>
-
-              <li class="select-item">
-                <button data-select-item>From Sratch Implementations</button>
-              </li>
-
-            </ul>
-
-          </div>
-
-          <ul class="project-list">
-
-            <li class="project-item  active" data-filter-item data-category="applications">
-              <a href="https://github.com/SanniM3/video_summarisation_git">
-
-                <figure class="project-img">
-                  <div class="project-item-icon-box">
-                    <ion-icon name="eye-outline"></ion-icon>
-                  </div>
-
-                  <img src="./assets/images/vid_summarisation.png" alt="finance" loading="lazy" style="width: 100%; height: 200px; object-fit: cover; border-radius: 16px;">
-                </figure>
-
-                <h3 class="project-title">Efficient Video Captioning Using A Generative Image-to-Text Transformer</h3>
-
-                <p class="project-category">Applications</p>
-
-              </a>
-            </li>
-
-            <li class="project-item  active" data-filter-item data-category="applications">
-              <a href="https://github.com/SanniM3/research-assistant">
-
-                <figure class="project-img">
-                  <div class="project-item-icon-box">
-                    <ion-icon name="eye-outline"></ion-icon>
-                  </div>
-
-                  <img src="./assets/images/research_assistant.png" alt="finance" loading="lazy" style="width: 100%; height: 200px; object-fit: cover; border-radius: 16px;">
-                </figure>
-
-                <h3 class="project-title">Multi-Agent Research Assistant with LangGraph</h3>
-
-                <p class="project-category">Applications</p>
-
-              </a>
-            </li>
-            <li class="project-item  active" data-filter-item data-category="applications">
-              <a href="https://github.com/rectlabs/rectvision">
-
-                <figure class="project-img">
-                  <div class="project-item-icon-box">
-                    <ion-icon name="eye-outline"></ion-icon>
-                  </div>
-
-                  <img src="./assets/images/rectvision.png" alt="finance" loading="lazy" style="width: 100%; height: 200px; object-fit: cover; border-radius: 16px;">
-                </figure>
-
-                <h3 class="project-title">RectVision</h3>
-
-                <p class="project-category">Applications</p>
-
-              </a>
-            </li>
-            <!-- <li class="project-item  active" data-filter-item data-category="web development">
-              <a href="#">
-
-                <figure class="project-img">
-                  <div class="project-item-icon-box">
-                    <ion-icon name="eye-outline"></ion-icon>
-                  </div>
-
-                  <img src="./assets/images/project-2.png" alt="orizon" loading="lazy">
-                </figure>
-
-                <h3 class="project-title">Orizon</h3>
-
-                <p class="project-category">Web development</p>
-
-              </a>
-            </li> -->
-
-            <!-- <li class="project-item  active" data-filter-item data-category="web design">
-              <a href="#">
-
-                <figure class="project-img">
-                  <div class="project-item-icon-box">
-                    <ion-icon name="eye-outline"></ion-icon>
-                  </div>
-
-                  <img src="./assets/images/project-3.jpg" alt="fundo" loading="lazy">
-                </figure>
-
-                <h3 class="project-title">Fundo</h3>
-
-                <p class="project-category">Web design</p>
-
-              </a>
-            </li> -->
-
-            <!-- <li class="project-item  active" data-filter-item data-category="applications">
-              <a href="#">
-
-                <figure class="project-img">
-                  <div class="project-item-icon-box">
-                    <ion-icon name="eye-outline"></ion-icon>
-                  </div>
-
-                  <img src="./assets/images/project-4.png" alt="brawlhalla" loading="lazy">
-                </figure>
-
-                <h3 class="project-title">Brawlhalla</h3>
-
-                <p class="project-category">Applications</p>
-
-              </a>
-            </li> -->
-
-            <li class="project-item  active" data-filter-item data-category="publications">
-              <a href="https://aclanthology.org/2024.acl-long.113/">
-
-                <figure class="project-img">
-                  <div class="project-item-icon-box">
-                    <ion-icon name="eye-outline"></ion-icon>
-                  </div>
-
-                  <img src="./assets/images/sparsefit.png" alt="dsm." loading="lazy" style="width: 100%; height: 200px; object-fit: cover; border-radius: 16px;">
-                </figure>
-
-                <h3 class="project-title">SparseFit: Few-shot Prompting with Sparse Fine-tuning for Jointly Generating Predictions and Natural Language Explanations</h3>
-
-                <p class="project-category">Publications</p>
-
-              </a>
-            </li>
-
-            <li class="project-item  active" data-filter-item data-category="publications">
-              <a href="https://aclanthology.org/2025.naacl-long.426/">
-
-                <figure class="project-img">
-                  <div class="project-item-icon-box">
-                    <ion-icon name="eye-outline"></ion-icon>
-                  </div>
-
-                  <img src="./assets/images/afrispeech_dialog.png" alt="dsm." loading="lazy" style="width: 100%; height: 200px; object-fit: cover; border-radius: 16px;">
-                </figure>
-
-                <h3 class="project-title">Afrispeech-Dialog: A Benchmark Dataset for Spontaneous English Conversations in Healthcare and Beyond</h3>
-
-                <p class="project-category">Publications</p>
-
-              </a>
-            </li>
-
-            <li class="project-item  active" data-filter-item data-category="publications">
-              <a href="https://aclanthology.org/2025.acl-long.96/">
-
-                <figure class="project-img">
-                  <div class="project-item-icon-box">
-                    <ion-icon name="eye-outline"></ion-icon>
-                  </div>
-
-                  <img src="./assets/images/afrimed_qa.png" alt="dsm." loading="lazy" style="width: 100%; height: 200px; object-fit: cover; border-radius: 16px;">
-                </figure>
-
-                <h3 class="project-title">AfriMed-QA: A Pan-African, Multi-Specialty, Medical Question-Answering Benchmark Dataset</h3>
-
-                <p class="project-category">Publications</p>
-
-              </a>
-            </li>
-            <li class="project-item  active" data-filter-item data-category="publications">
-              <a href="https://arxiv.org/abs/2511.14255">
-
-                <figure class="project-img">
-                  <div class="project-item-icon-box">
-                    <ion-icon name="eye-outline"></ion-icon>
-                  </div>
-
-                  <img src="./assets/images/afrispeech_multibench.png" alt="dsm." loading="lazy" style="width: 100%; height: 200px; object-fit: cover; border-radius: 16px;">
-                </figure>
-
-                <h3 class="project-title">AfriSpeech-MultiBench: A Verticalized Multidomain Multicountry Benchmark Suite for African Accented English ASR</h3>
-
-                <p class="project-category">Publications</p>
-
-              </a>
-            </li>
-            <li class="project-item  active" data-filter-item data-category="publications">
-              <a href="https://openreview.net/forum?id=tpKjdTuDmp">
-
-                <figure class="project-img">
-                  <div class="project-item-icon-box">
-                    <ion-icon name="eye-outline"></ion-icon>
-                  </div>
-
-                  <img src="./assets/images/afrivox.png" alt="dsm." loading="lazy" style="width: 100%; height: 200px; object-fit: cover; border-radius: 16px;">
-                </figure>
-
-                <h3 class="project-title">AfriVox: Probing Multilingual and Accent Robustness of Speech LLMs</h3>
-
-                <p class="project-category">Publications</p>
-
-              </a>
-            </li>
-            <li class="project-item  active" data-filter-item data-category="publications">
-              <a href="https://openreview.net/forum?id=VZ3XrC9Mpy">
-
-                <figure class="project-img">
-                  <div class="project-item-icon-box">
-                    <ion-icon name="eye-outline"></ion-icon>
-                  </div>
-
-                  <img src="./assets/images/kakugo.png" alt="dsm." loading="lazy" style="width: 100%; height: 200px; object-fit: cover; border-radius: 16px;">
-                </figure>
-
-                <h3 class="project-title">Kakugo: Distillation of Low-Resource Languages into Small Language Models</h3>
-
-                <p class="project-category">Publications</p>
-
-              </a>
-            </li>
-
-            <li class="project-item  active" data-filter-item data-category="publications">
-              <a href="https://arxiv.org/abs/2501.15310">
-
-                <figure class="project-img">
-                  <div class="project-item-icon-box">
-                    <ion-icon name="eye-outline"></ion-icon>
-                  </div>
-
-                  <img src="./assets/images/medical_assistant_paper.png" alt="dsm." loading="lazy" style="width: 100%; height: 200px; object-fit: cover; border-radius: 16px;">
-                </figure>
-
-                <h3 class="project-title">The Multicultural Medical Assistant: Can LLMs Improve Medical ASR Errors Across Borders?</h3>
-
-                <p class="project-category">Publications</p>
-
-              </a>
-            </li>
-
-            <!-- <li class="project-item  active" data-filter-item data-category="applications">
-              <a href="#">
-
-                <figure class="project-img">
-                  <div class="project-item-icon-box">
-                    <ion-icon name="eye-outline"></ion-icon>
-                  </div>
-
-                  <img src="./assets/images/project-8.jpg" alt="task manager" loading="lazy">
-                </figure>
-
-                <h3 class="project-title">Task Manager</h3>
-
-                <p class="project-category">Applications</p>
-
-              </a>
-            </li> -->
-
-            <!-- <li class="project-item  active" data-filter-item data-category="web development">
-              <a href="#">
-
-                <figure class="project-img">
-                  <div class="project-item-icon-box">
-                    <ion-icon name="eye-outline"></ion-icon>
-                  </div>
-
-                  <img src="./assets/images/project-9.png" alt="arrival" loading="lazy">
-                </figure>
-
-                <h3 class="project-title">Arrival</h3>
-
-                <p class="project-category">Web development</p>
-
-              </a>
-            </li> -->
-
-          </ul>
-
-        </section>
-
-      </article>
-
-
-
-
-
-      <!--
-        - #BLOG
-      -->
-
-      <article class="blog" data-page="blog">
-
-        <header>
-          <h2 class="h2 article-title">Blog</h2>
-        </header>
-
-        <section class="blog-posts">
-
-          <ul class="blog-posts-list">
-
-            <li class="blog-post-item">
-              <a href="./blog/concept-bottleneck.html">
-
-                <figure class="blog-banner-box">
-                  <img src="./assets/images/cbm.png" alt="Concept Bottleneck Models" loading="lazy" style="width: 100%; height: 200px; object-fit: cover; border-radius: 16px;">
-                </figure>
-
-                <div class="blog-content"> 
-
-                  <div class="blog-meta">
-                    <p class="blog-category">AI Interpretability</p>
-                  </div>
-
-                  <h3 class="h3 blog-item-title">From Black Box to Glass Box</h3>
-
-                  <p class="blog-text">
-                    The Role of Concept Bottleneck Models in AI Interpretability
-                  </p>
-
-                </div>
-
-              </a>
-            </li>
-            <li class="blog-post-item">
-              <a href="./blog/attention_1.html">
-
-                <figure class="blog-banner-box">
-                  <img src="./assets/images/cbm.png" alt="Why Attention Is Expensive (Part 1/3)" loading="lazy" style="width: 100%; height: 200px; object-fit: cover; border-radius: 16px;">
-                </figure>
-
-                <div class="blog-content"> 
-
-                  <div class="blog-meta">
-                    <p class="blog-category">LLM Fundamentals</p>
-                  </div>
-
-                  <h3 class="h3 blog-item-title">Why Attention Is Expensive</h3>
-
-                  <p class="blog-text">
-                    The Bottleneck at the Heart of Modern LLMs
-                  </p>
-
-                </div>
-
-              </a>
-            </li>
-
-            <li class="blog-post-item">
-              <a href="./blog/research_assistant.html">
-
-                <figure class="blog-banner-box">
-                  <img src="./assets/images/cbm.png" alt="Academic Deep Research" loading="lazy" style="width: 100%; height: 200px; object-fit: cover; border-radius: 16px;">
-                </figure>
-
-                <div class="blog-content"> 
-
-                  <div class="blog-meta">
-                    <p class="blog-category">Applications</p>
-                  </div>
-
-                  <h3 class="h3 blog-item-title">Designing a Multi‑Agent Deep Research System for Academic Survey Writing</h3>
-
-                  <p class="blog-text">
-                    
-                  </p>
-
-                </div>
-
-              </a>
-            </li>
-            
-
-            <li class="blog-post-item">
-              <a href="#">
-
-                <figure class="blog-banner-box">
-                  <img src="./assets/images/lora.png" alt="Lora from Scratch" loading="lazy" style="width: 100%; height: 200px; object-fit: cover; border-radius: 16px;">
-                </figure>
-
-                <div class="blog-content">
-
-                  <div class="blog-meta">
-                    <p class="blog-category">Paper Reimplementation</p>
-                  </div>
-
-                  <h3 class="h3 blog-item-title">LoRA</h3>
-
-                  <p class="blog-text">
-                    Coming soon...
-                  </p>
-
-                </div>
-
-              </a>
-            </li>
-
-            <li class="blog-post-item">
-              <a href="./blog/llama_3_tutorial.html">
-
-                <figure class="blog-banner-box">
-                  <img src="./assets/images/lora.png" alt="Implementing LLaMA 3 from Scratch" loading="lazy" style="width: 100%; height: 200px; object-fit: cover; border-radius: 16px;">
-                </figure>
-
-                <div class="blog-content">
-
-                  <div class="blog-meta">
-                    <p class="blog-category">Paper Reimplementation</p>
-                  </div>
-
-                  <h3 class="h3 blog-item-title">Implementing LLaMA 3 from Scratch</h3>
-
-                  <p class="blog-text">
-                    Coming soon...
-                  </p>
-
-                </div>
-
-              </a>
-            </li>
-
-            <!-- <li class="blog-post-item">
-              <a href="#">
-
-                <figure class="blog-banner-box">
-                  <img src="./assets/images/blog-2.jpg" alt="Best fonts every designer" loading="lazy">
-                </figure>
-
-                <div class="blog-content">
-
-                  <div class="blog-meta">
-                    <p class="blog-category">Design</p>
-
-                    <span class="dot"></span>
-
-                    <time datetime="2022-02-23">Fab 23, 2022</time>
-                  </div>
-
-                  <h3 class="h3 blog-item-title">Best fonts every designer</h3>
-
-                  <p class="blog-text">
-                    Sed ut perspiciatis, nam libero tempore, cum soluta nobis est eligendi.
-                  </p>
-
-                </div>
-
-              </a>
-            </li> -->
-
-            <!-- <li class="blog-post-item">
-              <a href="#">
-
-                <figure class="blog-banner-box">
-                  <img src="./assets/images/blog-3.jpg" alt="Design digest #80" loading="lazy">
-                </figure>
-
-                <div class="blog-content">
-
-                  <div class="blog-meta">
-                    <p class="blog-category">Design</p>
-
-                    <span class="dot"></span>
-
-                    <time datetime="2022-02-23">Fab 23, 2022</time>
-                  </div>
-
-                  <h3 class="h3 blog-item-title">Design digest #80</h3>
-
-                  <p class="blog-text">
-                    Excepteur sint occaecat cupidatat no proident, quis nostrum exercitationem ullam corporis suscipit.
-                  </p>
-
-                </div>
-
-              </a>
-            </li> -->
-
-            <!-- <li class="blog-post-item">
-              <a href="#">
-
-                <figure class="blog-banner-box">
-                  <img src="./assets/images/blog-4.jpg" alt="UI interactions of the week" loading="lazy">
-                </figure>
-
-                <div class="blog-content">
-
-                  <div class="blog-meta">
-                    <p class="blog-category">Design</p>
-
-                    <span class="dot"></span>
-
-                    <time datetime="2022-02-23">Fab 23, 2022</time>
-                  </div>
-
-                  <h3 class="h3 blog-item-title">UI interactions of the week</h3>
-
-                  <p class="blog-text">
-                    Enim ad minim veniam, consectetur adipiscing elit, quis nostrud exercitation ullamco laboris nisi.
-                  </p>
-
-                </div>
-
-              </a>
-            </li> -->
-
-            <!-- <li class="blog-post-item">
-              <a href="#">
-
-                <figure class="blog-banner-box">
-                  <img src="./assets/images/blog-5.jpg" alt="The forgotten art of spacing" loading="lazy">
-                </figure>
-
-                <div class="blog-content">
-
-                  <div class="blog-meta">
-                    <p class="blog-category">Design</p>
-
-                    <span class="dot"></span>
-
-                    <time datetime="2022-02-23">Fab 23, 2022</time>
-                  </div>
-
-                  <h3 class="h3 blog-item-title">The forgotten art of spacing</h3>
-
-                  <p class="blog-text">
-                    Maxime placeat, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-                  </p>
-
-                </div>
-
-              </a>
-            </li> -->
-
-            <!-- <li class="blog-post-item">
-              <a href="#">
-
-                <figure class="blog-banner-box">
-                  <img src="./assets/images/blog-6.jpg" alt="Design digest #79" loading="lazy">
-                </figure>
-
-                <div class="blog-content">
-
-                  <div class="blog-meta">
-                    <p class="blog-category">Design</p>
-
-                    <span class="dot"></span>
-
-                    <time datetime="2022-02-23">Fab 23, 2022</time>
-                  </div>
-
-                  <h3 class="h3 blog-item-title">Design digest #79</h3>
-
-                  <p class="blog-text">
-                    Optio cumque nihil impedit uo minus quod maxime placeat, velit esse cillum.
-                  </p>
-
-                </div>
-
-              </a>
-            </li> -->
-
-          </ul>
-
-        </section>
-
-      </article>
-
-
-
-
-
-      <!--
-        - #CONTACT
-      -->
-
-      <article class="contact" data-page="contact">
-
-        <header>
-          <h2 class="h2 article-title">Contact</h2>
-        </header>
-
-        <!-- <section class="mapbox" data-mapbox>
-          <figure>
-            <iframe
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d89904.03370384197!2d-3.2785211640423874!3d55.953252051808734!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x4887c786f50d5cf5%3A0x13ed5cfacfae8e2f!2sEdinburgh!5e0!3m2!1sen!2suk!4v1668338387171!5m2!1sen!2suk"
-              width="400" height="300" loading="lazy"></iframe>
-          </figure>
-        </section> -->
-
-        <section class="contact-form">
-
-          <h3 class="h3 form-title">Contact Form</h3>
-
-          <form action="https://formspree.io/f/mblkbzkg" method="POST">
-            <div class="input-wrapper">
-              <input type="text" name="fullname" class="form-input" placeholder="Full name" required>
-              <input type="email" name="email" class="form-input" placeholder="Email address" required>
             </div>
-            <textarea name="message" class="form-input" placeholder="Your Message" required></textarea>
-            <button class="form-btn" type="submit">
-              <ion-icon name="paper-plane"></ion-icon>
-              <span>Send Message</span>
-            </button>
-          </form>
+            
+            <div class="timeline-item">
+              <h4 class="timeline-role">AI Engineer, RectLabs</h4>
+              <span class="timeline-date">Jun. 2021 — Aug. 2022</span>
+              <p class="timeline-desc">
+                Built computer vision solutions, conducted model optimization research, and authored technical content on AI.
+              </p>
+            </div>
+          </div>
+        </div>
 
+        <!-- Skills -->
+        <div class="resume-block">
+          <h3 class="resume-block-title">
+            <ion-icon name="code-slash-outline"></ion-icon>
+            Skills
+          </h3>
+          
+          <div class="skills-grid">
+            <div class="skill-card">
+              <span class="skill-category">Programming</span>
+              <p class="skill-list">Python, SQL, Matlab, Data Structures and Algorithms</p>
+            </div>
+            
+            <div class="skill-card">
+              <span class="skill-category">Frameworks</span>
+              <p class="skill-list">Hugging Face, PyTorch, LangChain, LangGraph, NLTK, SpaCy, Scikit-learn, Keras, vLLM</p>
+            </div>
+            
+            <div class="skill-card">
+              <span class="skill-category">Cloud Platforms</span>
+              <p class="skill-list">Amazon Web Services (AWS), Google Cloud Platform (GCP)</p>
+            </div>
+            
+            <div class="skill-card">
+              <span class="skill-category">ML & AI</span>
+              <p class="skill-list">NLP, ASR, Sequence Modelling, Generative AI, RAG, LLMs, Computer Vision, Classification & Regression, Reinforcement Learning</p>
+            </div>
+            
+            <div class="skill-card">
+              <span class="skill-category">Data Science</span>
+              <p class="skill-list">Exploratory Data Analysis, A/B Testing, Clustering, Time-Series Forecasting, Data Engineering</p>
+            </div>
+            
+            <div class="skill-card">
+              <span class="skill-category">Soft Skills</span>
+              <p class="skill-list">Analytical Problem-Solving, Communication, Teamwork, Leadership, Adaptability</p>
+            </div>
+          </div>
+        </div>
 
-        </section>
+        <!-- Awards -->
+        <div class="resume-block">
+          <h3 class="resume-block-title">
+            <ion-icon name="trophy-outline"></ion-icon>
+            Awards
+          </h3>
+          
+          <div class="awards-list">
+            <div class="award-item">
+              <span class="award-icon">🏆</span>
+              <div class="award-content">
+                <p class="award-title">Best Social Impact Paper</p>
+                <p class="award-org">Annual Conference of the Association for Computational Linguistics (2025)</p>
+              </div>
+            </div>
+            
+            <div class="award-item">
+              <span class="award-icon">🎓</span>
+              <div class="award-content">
+                <p class="award-title">Best Graduating Student</p>
+                <p class="award-org">BSc Electronic and Electrical Engineering in Instrumentation and Control Option (Dec. 2021)</p>
+              </div>
+            </div>
+            
+            <div class="award-item">
+              <span class="award-icon">📜</span>
+              <div class="award-content">
+                <p class="award-title">Outstanding MSc. Thesis Submission</p>
+                <p class="award-org">School of Informatics,University of Edinburgh (Nov. 2023)</p>
+              </div>
+            </div>
+            
+            <!-- <div class="award-item">
+              <span class="award-icon">🛡️</span>
+              <div class="award-content">
+                <p class="award-title">AI Safety Fundamentals: Alignment</p>
+                <p class="award-org">BlueDot Impact (2025)</p>
+              </div>
+            </div> -->
+            
+            <!-- <div class="award-item">
+              <span class="award-icon">📚</span>
+              <div class="award-content">
+                <p class="award-title">Natural Language Processing Specialization</p>
+                <p class="award-org">Coursera (2023)</p>
+              </div>
+            </div> -->
+          </div>
+        </div>
+        <div class="resume-block">
+          <h3 class="resume-block-title">
+            <ion-icon name="trophy-outline"></ion-icon>
+            Certifications
+          </h3>
+          
+          <div class="awards-list">
+            <div class="award-item">
+              <span class="award-icon">
+                <img src="./assets/images/bluedotimpact_logo.jpeg" alt="BlueDot Impact">
+              </span>
+              <div class="award-content">
+                <p class="award-title">AI Safety Fundamentals: Alignment</p>
+                <p class="award-org">BlueDot Impact (2025)</p>
+              </div>
+            </div>
+            
+            <div class="award-item">
+              <span class="award-icon">
+                <img src="./assets/images/coursera_logo.png" alt="Coursera">
+              </span>
+              <div class="award-content">
+                <p class="award-title">Natural Language Processing Specialization</p>
+                <p class="award-org">Coursera (2023)</p>
+              </div>
+            </div>
+            
+            <div class="award-item">
+              <span class="award-icon">
+                <img src="./assets/images/udacity_logo.png" alt="Udacity">
+              </span>
+              <div class="award-content">
+                <p class="award-title">Predictive Analytics for Business Nanodegree</p>
+                <p class="award-org">Udacity (2021)</p>
+              </div>
+            </div>
+            
+            <div class="award-item">
+              <span class="award-icon">
+                <img src="./assets/images/udacity_logo.png" alt="Udacity">
+              </span>
+              <div class="award-content">
+                <p class="award-title">Deep Learning Nanodegree</p>
+                <p class="award-org">Udacity (2020)</p>
+              </div>
+            </div>
+            
+            
+          </div>
+        </div>
+      </section>
 
-      </article>
+      <!-- ==================== PORTFOLIO SECTION ==================== -->
+      <section id="portfolio" class="section">
+        <h2 class="section-title">Portfolio</h2>
 
-    </div>
+        <div class="filter-tabs">
+          <button class="filter-tab active" data-filter="all">All</button>
+          <button class="filter-tab" data-filter="applications">Applications</button>
+          <button class="filter-tab" data-filter="publications">Publications</button>
+        </div>
 
-  </main>
+        <div class="projects-grid">
+          <!-- Applications -->
+          <a href="https://github.com/SanniM3/video_summarisation_git" class="project-card active" data-category="applications" target="_blank" rel="noopener">
+            <div class="project-image">
+              <img src="./assets/images/vid_summarisation.png" alt="Video Captioning" loading="lazy">
+              <div class="project-overlay">
+                <span class="project-link-icon">
+                  <ion-icon name="open-outline"></ion-icon>
+                </span>
+              </div>
+            </div>
+            <div class="project-info">
+              <h3 class="project-title">Efficient Video Captioning Using A Generative Image-to-Text Transformer</h3>
+              <span class="project-category">Applications</span>
+            </div>
+          </a>
 
+          <a href="https://github.com/SanniM3/research-assistant" class="project-card active" data-category="applications" target="_blank" rel="noopener">
+            <div class="project-image">
+              <img src="./assets/images/research_assistant.png" alt="Research Assistant" loading="lazy">
+              <div class="project-overlay">
+                <span class="project-link-icon">
+                  <ion-icon name="open-outline"></ion-icon>
+                </span>
+              </div>
+            </div>
+            <div class="project-info">
+              <h3 class="project-title">Multi-Agent Research Assistant with LangGraph</h3>
+              <span class="project-category">Applications</span>
+            </div>
+          </a>
 
+          <a href="https://github.com/rectlabs/rectvision" class="project-card active" data-category="applications" target="_blank" rel="noopener">
+            <div class="project-image">
+              <img src="./assets/images/rectvision.png" alt="RectVision" loading="lazy">
+              <div class="project-overlay">
+                <span class="project-link-icon">
+                  <ion-icon name="open-outline"></ion-icon>
+                </span>
+              </div>
+            </div>
+            <div class="project-info">
+              <h3 class="project-title">RectVision</h3>
+              <span class="project-category">Applications</span>
+            </div>
+          </a>
 
+          <!-- Publications -->
+          <a href="https://aclanthology.org/2024.acl-long.113/" class="project-card active" data-category="publications" target="_blank" rel="noopener">
+            <div class="project-image">
+              <img src="./assets/images/sparsefit.png" alt="SparseFit" loading="lazy">
+              <div class="project-overlay">
+                <span class="project-link-icon">
+                  <ion-icon name="open-outline"></ion-icon>
+                </span>
+              </div>
+            </div>
+            <div class="project-info">
+              <h3 class="project-title">SparseFit: Few-shot Prompting with Sparse Fine-tuning for Jointly Generating Predictions and NL Explanations</h3>
+              <span class="project-category">Publications</span>
+            </div>
+          </a>
 
+          <a href="https://aclanthology.org/2025.naacl-long.426/" class="project-card active" data-category="publications" target="_blank" rel="noopener">
+            <div class="project-image">
+              <img src="./assets/images/afrispeech_dialog.png" alt="Afrispeech-Dialog" loading="lazy">
+              <div class="project-overlay">
+                <span class="project-link-icon">
+                  <ion-icon name="open-outline"></ion-icon>
+                </span>
+              </div>
+            </div>
+            <div class="project-info">
+              <h3 class="project-title">Afrispeech-Dialog: A Benchmark Dataset for Spontaneous English Conversations in Healthcare</h3>
+              <span class="project-category">Publications</span>
+            </div>
+          </a>
 
+          <a href="https://aclanthology.org/2025.acl-long.96/" class="project-card active" data-category="publications" target="_blank" rel="noopener">
+            <div class="project-image">
+              <img src="./assets/images/afrimed_qa.png" alt="AfriMed-QA" loading="lazy">
+              <div class="project-overlay">
+                <span class="project-link-icon">
+                  <ion-icon name="open-outline"></ion-icon>
+                </span>
+              </div>
+            </div>
+            <div class="project-info">
+              <h3 class="project-title">AfriMed-QA: A Pan-African, Multi-Specialty, Medical Question-Answering Benchmark Dataset</h3>
+              <span class="project-category">Publications</span>
+            </div>
+          </a>
 
-  <!--
-    - custom js link
-  -->
-  <script src="./assets/js/script.js"></script>
+          <a href="https://arxiv.org/abs/2511.14255" class="project-card active" data-category="publications" target="_blank" rel="noopener">
+            <div class="project-image">
+              <img src="./assets/images/afrispeech_multibench.png" alt="AfriSpeech-MultiBench" loading="lazy">
+              <div class="project-overlay">
+                <span class="project-link-icon">
+                  <ion-icon name="open-outline"></ion-icon>
+                </span>
+              </div>
+            </div>
+            <div class="project-info">
+              <h3 class="project-title">AfriSpeech-MultiBench: A Verticalized Multidomain Multicountry Benchmark Suite for African Accented English ASR</h3>
+              <span class="project-category">Publications</span>
+            </div>
+          </a>
 
-  <!--
-    - ionicon link
-  -->
-  <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
-  <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
+          <a href="https://openreview.net/forum?id=tpKjdTuDmp" class="project-card active" data-category="publications" target="_blank" rel="noopener">
+            <div class="project-image">
+              <img src="./assets/images/afrivox.png" alt="AfriVox" loading="lazy">
+              <div class="project-overlay">
+                <span class="project-link-icon">
+                  <ion-icon name="open-outline"></ion-icon>
+                </span>
+              </div>
+            </div>
+            <div class="project-info">
+              <h3 class="project-title">AfriVox: Probing Multilingual and Accent Robustness of Speech LLMs</h3>
+              <span class="project-category">Publications</span>
+            </div>
+          </a>
 
+          <a href="https://openreview.net/forum?id=VZ3XrC9Mpy" class="project-card active" data-category="publications" target="_blank" rel="noopener">
+            <div class="project-image">
+              <img src="./assets/images/kakugo.png" alt="Kakugo" loading="lazy">
+              <div class="project-overlay">
+                <span class="project-link-icon">
+                  <ion-icon name="open-outline"></ion-icon>
+                </span>
+              </div>
+            </div>
+            <div class="project-info">
+              <h3 class="project-title">Kakugo: Distillation of Low-Resource Languages into Small Language Models</h3>
+              <span class="project-category">Publications</span>
+            </div>
+          </a>
+
+          <a href="https://arxiv.org/abs/2501.15310" class="project-card active" data-category="publications" target="_blank" rel="noopener">
+            <div class="project-image">
+              <img src="./assets/images/medical_assistant_paper.png" alt="Medical Assistant" loading="lazy">
+              <div class="project-overlay">
+                <span class="project-link-icon">
+                  <ion-icon name="open-outline"></ion-icon>
+                </span>
+              </div>
+            </div>
+            <div class="project-info">
+              <h3 class="project-title">The Multicultural Medical Assistant: Can LLMs Improve Medical ASR Errors Across Borders?</h3>
+              <span class="project-category">Publications</span>
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <!-- ==================== BLOG SECTION ==================== -->
+      <section id="blog" class="section">
+        <h2 class="section-title">Blog</h2>
+
+        <div class="blog-grid">
+          <a href="./blog/concept-bottleneck.html" class="blog-card">
+            <div class="blog-image">
+              <img src="./assets/images/cbm.png" alt="Concept Bottleneck Models" loading="lazy">
+            </div>
+            <div class="blog-info">
+              <span class="blog-category">AI Interpretability</span>
+              <h3 class="blog-title">From Black Box to Glass Box</h3>
+              <p class="blog-excerpt">The Role of Concept Bottleneck Models in AI Interpretability</p>
+            </div>
+          </a>
+
+          <a href="./blog/attention_1.html" class="blog-card">
+            <div class="blog-image">
+              <img src="./assets/images/cbm.png" alt="Attention Mechanisms" loading="lazy">
+            </div>
+            <div class="blog-info">
+              <span class="blog-category">LLM Fundamentals</span>
+              <h3 class="blog-title">Why Attention Is Expensive</h3>
+              <p class="blog-excerpt">The Bottleneck at the Heart of Modern LLMs</p>
+            </div>
+          </a>
+
+          <a href="./blog/research_assistant.html" class="blog-card">
+            <div class="blog-image">
+              <img src="./assets/images/research_assistant.png" alt="Research Assistant" loading="lazy">
+            </div>
+            <div class="blog-info">
+              <span class="blog-category">Applications</span>
+              <h3 class="blog-title">Designing a Multi-Agent Deep Research System</h3>
+              <p class="blog-excerpt">Building an AI system for academic survey writing</p>
+            </div>
+          </a>
+
+          <div class="blog-card coming-soon">
+            <div class="blog-image">
+              <img src="./assets/images/lora.png" alt="LoRA" loading="lazy">
+            </div>
+            <div class="blog-info">
+              <span class="blog-category">Paper Reimplementation</span>
+              <h3 class="blog-title">LoRA from Scratch</h3>
+              <p class="blog-excerpt">Coming soon...</p>
+            </div>
+          </div>
+
+          <div class="blog-card coming-soon">
+            <div class="blog-image">
+              <img src="./assets/images/lora.png" alt="LLaMA 3" loading="lazy">
+            </div>
+            <div class="blog-info">
+              <span class="blog-category">Paper Reimplementation</span>
+              <h3 class="blog-title">Implementing LLaMA 3 from Scratch</h3>
+              <p class="blog-excerpt">Coming soon...</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== CONTACT SECTION ==================== -->
+      <section id="contact" class="section">
+        <h2 class="section-title">Contact</h2>
+
+        <form action="https://formspree.io/f/mblkbzkg" method="POST" class="contact-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="fullname">Full Name</label>
+              <input type="text" id="fullname" name="fullname" class="form-input" placeholder="Your name" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="email">Email Address</label>
+              <input type="email" id="email" name="email" class="form-input" placeholder="your@email.com" required>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label" for="message">Message</label>
+            <textarea id="message" name="message" class="form-textarea" placeholder="Your message..." required></textarea>
+          </div>
+          
+          <button type="submit" class="form-submit">
+            <ion-icon name="paper-plane-outline"></ion-icon>
+            <span>Send Message</span>
+          </button>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // Theme initialization
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+
+    // Theme toggle
+    function toggleTheme() {
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    }
+
+    // Navigation
+    document.addEventListener('DOMContentLoaded', () => {
+      const navTabs = document.querySelectorAll('.nav-tab');
+      const sections = document.querySelectorAll('.section');
+      
+      navTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const sectionId = tab.dataset.section;
+          
+          // Update active tab
+          navTabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          
+          // Update active section
+          sections.forEach(section => {
+            section.classList.remove('active');
+            if (section.id === sectionId) {
+              section.classList.add('active');
+            }
+          });
+          
+          // Update URL hash
+          history.pushState(null, null, `#${sectionId}`);
+        });
+      });
+      
+      // Handle initial hash
+      const hash = window.location.hash.slice(1);
+      if (hash) {
+        const targetTab = document.querySelector(`.nav-tab[data-section="${hash}"]`);
+        if (targetTab) targetTab.click();
+      }
+      
+      // Portfolio filtering
+      const filterTabs = document.querySelectorAll('.filter-tab');
+      const projectCards = document.querySelectorAll('.project-card');
+      
+      filterTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const filter = tab.dataset.filter;
+          
+          filterTabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          
+          projectCards.forEach(card => {
+            const category = card.dataset.category;
+            if (filter === 'all' || category === filter) {
+              card.classList.add('active');
+            } else {
+              card.classList.remove('active');
+            }
+          });
+        });
+      });
+    });
+  </script>
 </body>
-
 </html>
