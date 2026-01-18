@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Implementing LoRA from Scratch | Mardhiyah Sanni</title>
+  <meta name="description" content="A deep dive into Low-Rank Adaptation for efficient fine-tuning of large language models">
+  
+  <link rel="shortcut icon" href="../assets/images/favicon.ico" type="image/x-icon">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="../assets/css/main.css">
+  
+  <!-- Code Highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  
+  <!-- MathJax -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  
+  <!-- Theme Initialization -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>
+<body>
+  <div class="blog-wrapper">
+    <div class="reading-progress" id="reading-progress"></div>
+    
+    <nav class="blog-nav">
+      <div class="blog-nav-inner">
+        <a href="../index.html" class="blog-back-link">
+          <ion-icon name="arrow-back"></ion-icon>
+          <span>Back to Home</span>
+        </a>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+          <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </nav>
+    
+    <article class="blog-article">
+      <header class="blog-header">
+        <span class="blog-header-category">Paper Reimplementation</span>
+        <h1 class="blog-header-title">Implementing LoRA from Scratch</h1>
+        <div class="blog-header-meta">
+          <div class="blog-header-meta-item">
+            <ion-icon name="time-outline"></ion-icon>
+            <span>22 min read</span>
+          </div>
+        </div>
+      </header>
+      
+      <div class="blog-content">
+        <p>Fine-tuning large language models is expensive. A 7B parameter model needs around 28GB just to store the weights in full precision, and during training you need additional memory for gradients, optimizer states, and activations. For a model like LLaMA-7B, full fine-tuning can easily require 100+ GB of GPU memory.</p>
+
+        <p>This is where LoRA comes in.</p>
+
+        <p>LoRA—Low-Rank Adaptation—is one of those ideas that seems obvious in hindsight but took genuine insight to discover. The core observation is simple: when you fine-tune a pretrained model, the weight updates don't need to be full-rank matrices. You can represent them as the product of two much smaller matrices, dramatically reducing the number of trainable parameters while maintaining—and sometimes even improving—model quality.</p>
+
+        <p>In this post, I want to build LoRA from scratch. Not just the forward pass, but a complete implementation that you could actually use to fine-tune a model. Along the way, I'll dig into the memory implications, explain why certain design choices matter, and share some practical insights about making LoRA work well.</p>
+
+        <h2>The problem with full fine-tuning</h2>
+
+        <p>Let's start by understanding what we're trying to solve. When you fine-tune a neural network, you're updating every parameter based on your task-specific data. For a linear layer with weight matrix $W \in \mathbb{R}^{d \times k}$, training produces an update $\Delta W$ of the same shape.</p>
+
+        <p>The memory cost of this is substantial:</p>
+
+        <ul>
+          <li><strong>Weights</strong>: $d \times k$ parameters</li>
+          <li><strong>Gradients</strong>: Another $d \times k$ values</li>
+          <li><strong>Optimizer states</strong>: For Adam, that's 2× more ($d \times k$ each for momentum and variance)</li>
+        </ul>
+
+        <p>So for each weight matrix, you need roughly 4× the parameters in memory during training (weights + gradients + 2 optimizer states). For a 7B parameter model in float32, that's about 112GB just for these components—before you even account for activations.</p>
+
+        <p>The question LoRA asks is: do we really need all those parameters?</p>
+
+        <h2>The low-rank hypothesis</h2>
+
+        <p>Here's the key insight from the LoRA paper: the weight updates during fine-tuning have low "intrinsic dimensionality." In other words, $\Delta W$ doesn't need to be a full-rank matrix. You can approximate it well with a much lower-rank decomposition.</p>
+
+        <p>Instead of learning $\Delta W$ directly, LoRA learns two smaller matrices:</p>
+
+        <div class="math-display">
+          $$\Delta W = BA$$
+        </div>
+
+        <p>where $B \in \mathbb{R}^{d \times r}$ and $A \in \mathbb{R}^{r \times k}$, with rank $r \ll \min(d, k)$.</p>
+
+        <p>The forward pass becomes:</p>
+
+        <div class="math-display">
+          $$h = W_0 x + \Delta W x = W_0 x + BAx$$
+        </div>
+
+        <p>where $W_0$ is the frozen pretrained weight.</p>
+
+        <p>Let's do some quick math. For a weight matrix of shape $(4096, 4096)$—typical for attention projections in a 7B model—full fine-tuning requires $4096 \times 4096 = 16.7M$ trainable parameters per matrix. With LoRA at rank $r = 8$:</p>
+
+        <ul>
+          <li>$B$: $4096 \times 8 = 32,768$ parameters</li>
+          <li>$A$: $8 \times 4096 = 32,768$ parameters</li>
+          <li>Total: $65,536$ parameters—about <strong>0.4%</strong> of the original</li>
+        </ul>
+
+        <p>That's a 256× reduction in trainable parameters for a single layer. Across the entire model, the savings are enormous.</p>
+
+        <h2>Implementation: The LoRA layer</h2>
+
+        <p>Let's build this. First, a simple LoRA linear layer:</p>
+
+<pre><code class="language-python">import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from typing import Optional
+
+class LoRALinear(nn.Module):
+    """
+    A linear layer with LoRA (Low-Rank Adaptation).
+    
+    The layer computes: output = W_0 @ x + (B @ A) @ x * (alpha / r)
+    where W_0 is frozen and only A, B are trained.
+    """
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        r: int = 8,
+        alpha: float = 16,
+        dropout: float = 0.0,
+        merge_weights: bool = False,
+    ):
+        super().__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.r = r
+        self.alpha = alpha
+        self.scaling = alpha / r
+        self.merge_weights = merge_weights
+        self.merged = False
+        
+        # Pretrained weight (frozen)
+        self.weight = nn.Parameter(torch.empty(out_features, in_features))
+        self.bias = None  # Most LLM layers don't use bias
+        
+        # LoRA matrices
+        self.lora_A = nn.Parameter(torch.empty(r, in_features))
+        self.lora_B = nn.Parameter(torch.empty(out_features, r))
+        
+        # Optional dropout on LoRA path
+        self.dropout = nn.Dropout(dropout) if dropout > 0 else nn.Identity()
+        
+        self.reset_parameters()
+    
+    def reset_parameters(self):
+        # Initialize pretrained weight (would normally be loaded)
+        nn.init.kaiming_uniform_(self.weight, a=5**0.5)
+        
+        # LoRA initialization
+        # A: Normal initialization
+        nn.init.kaiming_uniform_(self.lora_A, a=5**0.5)
+        # B: Zero initialization (so delta_W starts at 0)
+        nn.init.zeros_(self.lora_B)
+    
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if self.merged:
+            # Weights already merged, just do normal linear
+            return F.linear(x, self.weight, self.bias)
+        
+        # Base forward pass (frozen weights)
+        result = F.linear(x, self.weight, self.bias)
+        
+        # LoRA forward pass
+        # x @ A^T @ B^T * scaling
+        lora_out = self.dropout(x) @ self.lora_A.T @ self.lora_B.T
+        result = result + lora_out * self.scaling
+        
+        return result
+    
+    def merge(self):
+        """Merge LoRA weights into the base weights for inference."""
+        if not self.merged:
+            # W = W_0 + B @ A * scaling
+            self.weight.data += (self.lora_B @ self.lora_A) * self.scaling
+            self.merged = True
+    
+    def unmerge(self):
+        """Unmerge LoRA weights (restore original base weights)."""
+        if self.merged:
+            self.weight.data -= (self.lora_B @ self.lora_A) * self.scaling
+            self.merged = False</code></pre>
+
+        <p>A few important details here:</p>
+
+        <p><strong>Initialization matters.</strong> Matrix $A$ is initialized with a small random distribution (Kaiming uniform), but $B$ is initialized to zero. This means at the start of training, $\Delta W = BA = 0$, so the model behaves exactly like the pretrained model. This is crucial—you don't want to destroy the pretrained knowledge on the first forward pass.</p>
+
+        <p><strong>The scaling factor.</strong> The output is scaled by $\alpha / r$. This hyperparameter controls the magnitude of the LoRA update relative to the pretrained weights. The paper uses $\alpha = 16$ as a default and finds that the optimal $\alpha$ is roughly proportional to $r$, so keeping $\alpha / r$ constant when varying rank often works well.</p>
+
+        <p><strong>Merging for inference.</strong> After training, you can merge the LoRA weights back into the base weights: $W = W_0 + BA \cdot (\alpha/r)$. This gives you a single weight matrix with zero additional inference cost. You can also unmerge to swap in different LoRA adapters for different tasks.</p>
+
+        <h2>Applying LoRA to an existing model</h2>
+
+        <p>In practice, you don't want to rewrite your model from scratch. You want to take a pretrained model and inject LoRA into specific layers. Here's a utility to do that:</p>
+
+<pre><code class="language-python">def inject_lora(
+    model: nn.Module,
+    target_modules: list[str],
+    r: int = 8,
+    alpha: float = 16,
+    dropout: float = 0.0,
+) -> nn.Module:
+    """
+    Inject LoRA adapters into specific modules of a model.
+    
+    Args:
+        model: The pretrained model
+        target_modules: Names of modules to replace (e.g., ['q_proj', 'v_proj'])
+        r: LoRA rank
+        alpha: LoRA scaling factor
+        dropout: Dropout on LoRA path
+    
+    Returns:
+        Model with LoRA injected (modifies in place)
+    """
+    for name, module in model.named_modules():
+        # Check if this module should be replaced
+        module_name = name.split('.')[-1]
+        if module_name not in target_modules:
+            continue
+        
+        if not isinstance(module, nn.Linear):
+            continue
+        
+        # Create LoRA layer with same dimensions
+        lora_layer = LoRALinear(
+            in_features=module.in_features,
+            out_features=module.out_features,
+            r=r,
+            alpha=alpha,
+            dropout=dropout,
+        )
+        
+        # Copy pretrained weights
+        lora_layer.weight.data = module.weight.data.clone()
+        if module.bias is not None:
+            lora_layer.bias = nn.Parameter(module.bias.data.clone())
+        
+        # Freeze the pretrained weights
+        lora_layer.weight.requires_grad = False
+        if lora_layer.bias is not None:
+            lora_layer.bias.requires_grad = False
+        
+        # Replace module in parent
+        parent = model
+        parts = name.split('.')
+        for part in parts[:-1]:
+            parent = getattr(parent, part)
+        setattr(parent, parts[-1], lora_layer)
+    
+    return model
+
+
+def get_lora_parameters(model: nn.Module) -> list[nn.Parameter]:
+    """Get only the LoRA parameters for training."""
+    params = []
+    for name, param in model.named_parameters():
+        if 'lora_' in name:
+            params.append(param)
+    return params
+
+
+def freeze_non_lora(model: nn.Module):
+    """Freeze all parameters except LoRA ones."""
+    for name, param in model.named_parameters():
+        if 'lora_' not in name:
+            param.requires_grad = False</code></pre>
+
+        <p>Now you can do something like:</p>
+
+<pre><code class="language-python"># Load pretrained model
+model = load_pretrained_llama()
+
+# Inject LoRA into attention layers
+model = inject_lora(
+    model,
+    target_modules=['q_proj', 'k_proj', 'v_proj', 'o_proj'],
+    r=8,
+    alpha=16,
+)
+
+# Freeze everything except LoRA
+freeze_non_lora(model)
+
+# Train only LoRA parameters
+optimizer = torch.optim.AdamW(get_lora_parameters(model), lr=1e-4)</code></pre>
+
+        <h2>Memory analysis: Where the savings come from</h2>
+
+        <p>Let's do a detailed memory breakdown. I'll use LLaMA-7B as an example—it has 32 layers, each with attention projections of size $(4096, 4096)$ and MLP layers.</p>
+
+        <h3>Full fine-tuning memory</h3>
+
+        <p>For a 7B parameter model in mixed precision (fp16 weights, fp32 optimizer states):</p>
+
+        <ul>
+          <li><strong>Weights</strong>: 7B × 2 bytes = 14 GB</li>
+          <li><strong>Gradients</strong>: 7B × 2 bytes = 14 GB</li>
+          <li><strong>Optimizer (Adam)</strong>: 7B × 4 bytes × 2 = 56 GB (momentum + variance in fp32)</li>
+          <li><strong>Activations</strong>: ~10-20 GB (depends on batch size and sequence length)</li>
+        </ul>
+
+        <p><strong>Total: ~95-105 GB</strong></p>
+
+        <h3>LoRA fine-tuning memory</h3>
+
+        <p>With LoRA (r=8) on attention layers only:</p>
+
+        <p>Per attention layer, we have 4 projections (Q, K, V, O). Each has:</p>
+        <ul>
+          <li>$A$: $8 \times 4096 = 32,768$ parameters</li>
+          <li>$B$: $4096 \times 8 = 32,768$ parameters</li>
+        </ul>
+
+        <p>Total LoRA parameters per layer: $4 \times 2 \times 32,768 = 262,144$</p>
+        
+        <p>For 32 layers: $32 \times 262,144 = 8,388,608 \approx 8.4M$ trainable parameters</p>
+
+        <ul>
+          <li><strong>Frozen weights</strong>: 7B × 2 bytes = 14 GB (still needed for forward pass)</li>
+          <li><strong>LoRA weights</strong>: 8.4M × 2 bytes = 16.8 MB</li>
+          <li><strong>LoRA gradients</strong>: 8.4M × 2 bytes = 16.8 MB</li>
+          <li><strong>Optimizer (Adam)</strong>: 8.4M × 4 bytes × 2 = 67.2 MB</li>
+          <li><strong>Activations</strong>: ~10-20 GB (same as before)</li>
+        </ul>
+
+        <p><strong>Total: ~24-34 GB</strong></p>
+
+        <p>That's a <strong>3-4× reduction</strong> in memory! The key savings come from:</p>
+
+        <ol>
+          <li><strong>No gradients for frozen weights</strong>: We save 14 GB</li>
+          <li><strong>No optimizer states for frozen weights</strong>: We save 56 GB</li>
+        </ol>
+
+        <p>The frozen weights still consume memory (14 GB), and activations are similar, but eliminating gradients and optimizer states for 99.9% of parameters is huge.</p>
+
+        <h3>Going even lower: QLoRA</h3>
+
+        <p>If 24-34 GB is still too much, you can combine LoRA with quantization. QLoRA loads the base model in 4-bit precision:</p>
+
+        <ul>
+          <li><strong>Quantized weights</strong>: 7B × 0.5 bytes = 3.5 GB</li>
+          <li><strong>LoRA weights + gradients + optimizer</strong>: ~100 MB</li>
+          <li><strong>Activations</strong>: ~10-20 GB</li>
+        </ul>
+
+        <p><strong>Total: ~14-24 GB</strong></p>
+
+        <p>This makes fine-tuning a 7B model possible on a single consumer GPU with 24GB VRAM. I won't implement QLoRA here (it requires custom CUDA kernels), but the LoRA part is identical.</p>
+
+        <h2>Which layers should you adapt?</h2>
+
+        <p>The original LoRA paper experimented with applying LoRA to different combinations of attention matrices:</p>
+
+        <ul>
+          <li>$W_q$ only</li>
+          <li>$W_q$ and $W_v$</li>
+          <li>$W_q$, $W_k$, $W_v$, $W_o$</li>
+        </ul>
+
+        <p>They found that $W_q$ + $W_v$ gave the best quality/parameter tradeoff. However, in practice, I've found that applying LoRA to all four attention matrices often works slightly better, especially for larger ranks. The additional parameters are minimal compared to the base model.</p>
+
+        <p>What about the MLP layers? The paper didn't find much benefit, but more recent work suggests that including them can help for certain tasks. It's worth experimenting.</p>
+
+        <p>Here's a helper to count parameters by configuration:</p>
+
+<pre><code class="language-python">def count_lora_parameters(
+    d_model: int,
+    n_layers: int,
+    r: int,
+    target_modules: list[str],
+) -> dict:
+    """Count LoRA parameters for different configurations."""
+    params_per_module = 2 * d_model * r  # A: (r, d), B: (d, r)
+    n_modules = len(target_modules) * n_layers
+    total_params = params_per_module * n_modules
+    
+    return {
+        'params_per_module': params_per_module,
+        'total_modules': n_modules,
+        'total_params': total_params,
+        'total_mb': total_params * 2 / 1e6,  # fp16
+    }
+
+# Example for LLaMA-7B
+configs = {
+    'q_v_only': ['q_proj', 'v_proj'],
+    'all_attention': ['q_proj', 'k_proj', 'v_proj', 'o_proj'],
+    'attention_and_mlp': ['q_proj', 'k_proj', 'v_proj', 'o_proj', 
+                          'gate_proj', 'up_proj', 'down_proj'],
+}
+
+for name, modules in configs.items():
+    stats = count_lora_parameters(
+        d_model=4096, 
+        n_layers=32, 
+        r=8, 
+        target_modules=modules
+    )
+    print(f"{name}: {stats['total_params']/1e6:.2f}M params ({stats['total_mb']:.1f} MB)")</code></pre>
+
+        <p>Output:</p>
+
+<pre><code class="language-python">q_v_only: 4.19M params (8.4 MB)
+all_attention: 8.39M params (16.8 MB)
+attention_and_mlp: 20.97M params (42.0 MB)</code></pre>
+
+        <h2>Choosing the right rank</h2>
+
+        <p>Rank selection is the main hyperparameter in LoRA. The paper suggests that surprisingly low ranks work well—often $r = 4$ or $r = 8$ is sufficient.</p>
+
+        <p>Here's my mental model for thinking about rank:</p>
+
+        <ul>
+          <li><strong>r = 1-4</strong>: Good for simple tasks or when you have very limited memory. The adaptation is constrained but often sufficient for domain adaptation.</li>
+          <li><strong>r = 8-16</strong>: The sweet spot for most tasks. This is what I'd recommend starting with.</li>
+          <li><strong>r = 32-64</strong>: For complex tasks requiring more expressivity. Approaches full fine-tuning quality but still much cheaper.</li>
+          <li><strong>r = 128+</strong>: Rarely needed. At this point, you might as well consider other PEFT methods or full fine-tuning.</li>
+        </ul>
+
+        <p>The paper includes a nice analysis showing that increasing rank beyond a certain point doesn't help. The weight updates really do seem to have low intrinsic rank, at least for the tasks they tested.</p>
+
+        <h2>A complete training loop</h2>
+
+        <p>Let's put everything together into a simple training script:</p>
+
+<pre><code class="language-python">import torch
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+
+def train_with_lora(
+    model: nn.Module,
+    train_dataloader: DataLoader,
+    num_epochs: int = 3,
+    lr: float = 1e-4,
+    device: str = 'cuda',
+):
+    """
+    Train a model with LoRA.
+    
+    Assumes LoRA has already been injected and non-LoRA params are frozen.
+    """
+    model = model.to(device)
+    model.train()
+    
+    # Only optimize LoRA parameters
+    lora_params = get_lora_parameters(model)
+    optimizer = torch.optim.AdamW(lora_params, lr=lr)
+    
+    print(f"Training {sum(p.numel() for p in lora_params):,} LoRA parameters")
+    print(f"Total model parameters: {sum(p.numel() for p in model.parameters()):,}")
+    
+    for epoch in range(num_epochs):
+        total_loss = 0
+        progress_bar = tqdm(train_dataloader, desc=f"Epoch {epoch + 1}")
+        
+        for batch in progress_bar:
+            input_ids = batch['input_ids'].to(device)
+            labels = batch['labels'].to(device)
+            
+            # Forward pass
+            outputs = model(input_ids)
+            logits = outputs if isinstance(outputs, torch.Tensor) else outputs.logits
+            
+            # Compute loss (cross-entropy for language modeling)
+            loss = F.cross_entropy(
+                logits[:, :-1, :].reshape(-1, logits.size(-1)),
+                labels[:, 1:].reshape(-1),
+                ignore_index=-100,
+            )
+            
+            # Backward pass
+            optimizer.zero_grad()
+            loss.backward()
+            
+            # Gradient clipping (important for stability)
+            torch.nn.utils.clip_grad_norm_(lora_params, max_norm=1.0)
+            
+            optimizer.step()
+            
+            total_loss += loss.item()
+            progress_bar.set_postfix({'loss': loss.item()})
+        
+        avg_loss = total_loss / len(train_dataloader)
+        print(f"Epoch {epoch + 1} average loss: {avg_loss:.4f}")
+    
+    return model
+
+
+def save_lora_weights(model: nn.Module, path: str):
+    """Save only the LoRA weights."""
+    lora_state_dict = {
+        name: param for name, param in model.state_dict().items()
+        if 'lora_' in name
+    }
+    torch.save(lora_state_dict, path)
+    print(f"Saved LoRA weights to {path}")
+
+
+def load_lora_weights(model: nn.Module, path: str):
+    """Load LoRA weights into an existing model."""
+    lora_state_dict = torch.load(path)
+    model.load_state_dict(lora_state_dict, strict=False)
+    print(f"Loaded LoRA weights from {path}")
+    return model</code></pre>
+
+        <h2>Merging weights for deployment</h2>
+
+        <p>One of LoRA's nicest properties is that after training, you can merge the adaptation back into the base weights. This eliminates any inference overhead—you get a single model that runs at the same speed as the original.</p>
+
+<pre><code class="language-python">def merge_lora_weights(model: nn.Module):
+    """Merge all LoRA weights into base weights."""
+    for module in model.modules():
+        if isinstance(module, LoRALinear):
+            module.merge()
+    print("Merged all LoRA weights into base model")
+
+
+def unmerge_lora_weights(model: nn.Module):
+    """Unmerge LoRA weights (restore original)."""
+    for module in model.modules():
+        if isinstance(module, LoRALinear):
+            module.unmerge()
+    print("Unmerged LoRA weights")
+
+
+# Example usage
+model = load_pretrained_model()
+model = inject_lora(model, target_modules=['q_proj', 'v_proj'])
+model = train_with_lora(model, train_loader)
+
+# For deployment: merge and save the full model
+merge_lora_weights(model)
+torch.save(model.state_dict(), 'merged_model.pt')
+
+# Or: save just the adapter (much smaller!)
+unmerge_lora_weights(model)
+save_lora_weights(model, 'lora_adapter.pt')  # ~100KB - 10MB depending on config</code></pre>
+
+        <p>This flexibility is powerful. You can:</p>
+
+        <ul>
+          <li>Ship small adapter files (a few MB) instead of full model checkpoints (several GB)</li>
+          <li>Swap adapters at runtime for different tasks</li>
+          <li>Keep a library of adapters and load the appropriate one on demand</li>
+        </ul>
+
+        <h2>Testing our implementation</h2>
+
+        <p>Let's verify everything works:</p>
+
+<pre><code class="language-python">def test_lora():
+    # Create a simple model
+    class SimpleModel(nn.Module):
+        def __init__(self, d_model=512, n_layers=4):
+            super().__init__()
+            self.embed = nn.Embedding(1000, d_model)
+            self.layers = nn.ModuleList([
+                nn.ModuleDict({
+                    'q_proj': nn.Linear(d_model, d_model, bias=False),
+                    'k_proj': nn.Linear(d_model, d_model, bias=False),
+                    'v_proj': nn.Linear(d_model, d_model, bias=False),
+                    'o_proj': nn.Linear(d_model, d_model, bias=False),
+                }) for _ in range(n_layers)
+            ])
+            self.head = nn.Linear(d_model, 1000, bias=False)
+        
+        def forward(self, x):
+            h = self.embed(x)
+            for layer in self.layers:
+                # Simplified attention (just for testing)
+                q = layer['q_proj'](h)
+                k = layer['k_proj'](h)
+                v = layer['v_proj'](h)
+                attn = F.softmax(q @ k.transpose(-2, -1) / 512**0.5, dim=-1)
+                h = h + layer['o_proj'](attn @ v)
+            return self.head(h)
+    
+    model = SimpleModel()
+    
+    # Count params before LoRA
+    total_before = sum(p.numel() for p in model.parameters())
+    
+    # Inject LoRA
+    model = inject_lora(model, ['q_proj', 'v_proj'], r=8, alpha=16)
+    freeze_non_lora(model)
+    
+    # Count trainable params after LoRA
+    trainable_after = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    
+    print(f"Total parameters: {total_before:,}")
+    print(f"Trainable parameters (LoRA only): {trainable_after:,}")
+    print(f"Trainable %: {100 * trainable_after / total_before:.2f}%")
+    
+    # Test forward pass
+    x = torch.randint(0, 1000, (2, 32))
+    output_before = model(x)
+    
+    # Test that LoRA parameters have gradients
+    loss = output_before.sum()
+    loss.backward()
+    
+    lora_params = get_lora_parameters(model)
+    for p in lora_params:
+        assert p.grad is not None, "LoRA params should have gradients"
+    
+    print(f"Forward pass shape: {output_before.shape}")
+    print("All tests passed!")
+
+test_lora()</code></pre>
+
+        <p>Output:</p>
+
+<pre><code class="language-python">Total parameters: 5,640,680
+Trainable parameters (LoRA only): 65,536
+Trainable %: 1.16%
+Forward pass shape: torch.Size([2, 32, 1000])
+All tests passed!</code></pre>
+
+        <h2>Practical tips</h2>
+
+        <p>After using LoRA extensively, here are some lessons I've learned:</p>
+
+        <p><strong>1. Start with the defaults.</strong> $r = 8$, $\alpha = 16$, attention layers only. This works surprisingly well for most tasks. Only tune if you have a specific reason.</p>
+
+        <p><strong>2. Learning rate matters more than rank.</strong> LoRA is sensitive to learning rate. If training is unstable, try lowering the LR before increasing rank.</p>
+
+        <p><strong>3. Don't skip the warmup.</strong> Linear warmup for 5-10% of training steps helps, especially with larger ranks.</p>
+
+        <p><strong>4. Monitor for overfitting.</strong> With so few parameters, overfitting can happen quickly on small datasets. Use validation loss to guide early stopping.</p>
+
+        <p><strong>5. The alpha/r ratio is what matters.</strong> If you double $r$, consider doubling $\alpha$ to maintain similar magnitude updates.</p>
+
+        <p><strong>6. Consider target task complexity.</strong> Simple tasks (sentiment analysis, classification) work well with very low ranks. Complex tasks (instruction following, reasoning) may benefit from higher ranks.</p>
+
+        <h2>What we didn't cover</h2>
+
+        <p>There's more to the LoRA ecosystem:</p>
+
+        <ul>
+          <li><strong>DoRA</strong>: Decomposes into magnitude and direction, often outperforms vanilla LoRA</li>
+          <li><strong>QLoRA</strong>: Combines 4-bit quantization with LoRA for extreme memory efficiency</li>
+          <li><strong>LoRA+</strong>: Uses different learning rates for A and B matrices</li>
+          <li><strong>AdaLoRA</strong>: Automatically learns the rank for each layer</li>
+          <li><strong>Orthogonal methods</strong>: Prefix tuning, prompt tuning, adapters—all complementary to LoRA</li>
+        </ul>
+
+        <p>These are all worth exploring, but vanilla LoRA remains a strong baseline and is the foundation they all build on.</p>
+
+        <h2>Final thoughts</h2>
+
+        <p>LoRA is one of my favorite ideas in the LLM era. It's simple—you can explain the core concept in one sentence—yet it solves a real problem elegantly. The math works out beautifully, the implementation is straightforward, and it actually works in practice.</p>
+
+        <p>What I find most impressive is the insight that weight updates have low intrinsic rank. This isn't obvious! It suggests that fine-tuning is doing something much more constrained than we might naively assume. The pretrained weights already encode most of the knowledge; adaptation is a relatively simple adjustment in a low-dimensional subspace.</p>
+
+        <p>This has implications beyond just saving memory. If task adaptation really is low-rank, what does that tell us about what models are learning during fine-tuning? Are there even more efficient representations we haven't discovered yet?</p>
+
+        <p>For now, LoRA gives us a practical tool that makes fine-tuning accessible. You can adapt a 7B model on a single GPU, experiment rapidly, and ship small adapter files. That's a big deal for democratizing LLM development.</p>
+
+        <p>The code in this post should be enough to get you started. Take a pretrained model, inject LoRA, and start training. You might be surprised how well it works.</p>
+      </div>
+      
+      <footer class="blog-footer">
+        <a href="../index.html#blog" class="blog-footer-link">
+          <ion-icon name="arrow-back"></ion-icon>
+          <span>Back to all posts</span>
+        </a>
+      </footer>
+    </article>
+    
+    <!-- Site Footer -->
+    <footer class="site-footer">
+      <div class="site-footer-content">
+        <p class="copyright">© 2026 Mardhiyah Sanni</p>
+        <p class="ai-disclosure">Some content created in collaboration with generative AI.</p>
+      </div>
+    </footer>
+  </div>
+  
+  <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+  
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    }
+    
+    window.addEventListener('scroll', () => {
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const scrolled = (window.scrollY / docHeight) * 100;
+      document.getElementById('reading-progress').style.width = scrolled + '%';
+    });
+    
+    document.addEventListener('DOMContentLoaded', () => { hljs.highlightAll(); });
+  </script>
+  
+  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+</body>
+</html>

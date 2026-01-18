@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Implementing LLaMA 3 from Scratch | Mardhiyah Sanni</title>
+  <meta name="description" content="A detailed walkthrough of building LLaMA 3's architecture from the ground up in PyTorch">
+  
+  <link rel="shortcut icon" href="../assets/images/favicon.ico" type="image/x-icon">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="../assets/css/main.css">
+  
+  <!-- Code Highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  
+  <!-- MathJax -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  
+  <!-- Theme Initialization -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>
+<body>
+  <div class="blog-wrapper">
+    <div class="reading-progress" id="reading-progress"></div>
+    
+    <nav class="blog-nav">
+      <div class="blog-nav-inner">
+        <a href="../index.html" class="blog-back-link">
+          <ion-icon name="arrow-back"></ion-icon>
+          <span>Back to Home</span>
+        </a>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+          <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </nav>
+    
+    <article class="blog-article">
+      <header class="blog-header">
+        <span class="blog-header-category">Paper Reimplementation</span>
+        <h1 class="blog-header-title">Implementing LLaMA 3 from Scratch</h1>
+        <div class="blog-header-meta">
+          <div class="blog-header-meta-item">
+            <ion-icon name="time-outline"></ion-icon>
+            <span>25 min read</span>
+          </div>
+        </div>
+      </header>
+      
+      <div class="blog-content">
+        <p>I've always found that the best way to understand a neural network architecture is to build it yourself. Reading papers is useful, but there's something about writing the code—making decisions about tensor shapes, debugging dimension mismatches, and watching the pieces come together—that builds a kind of intuition you can't get any other way.</p>
+
+        <p>So let's build LLaMA 3.</p>
+
+        <p>This isn't going to be a line-by-line commentary on Meta's official implementation. Instead, I want to walk through the architecture decisions that make LLaMA 3 what it is, explain why those decisions matter, and implement each component in a way that's both correct and readable. By the end, you'll have a working model that you could, in principle, train on your own data.</p>
+
+        <p>Fair warning: I'm going to assume you're comfortable with PyTorch and have a basic understanding of transformer architectures. If terms like "attention heads" or "layer normalization" are unfamiliar, you might want to start with a more introductory resource first.</p>
+
+        <h2>What makes LLaMA 3 different?</h2>
+
+        <p>Before we dive into code, it's worth understanding what distinguishes LLaMA 3 from earlier transformer architectures. The changes aren't radical—this is still very much a decoder-only transformer—but the specific design choices reflect years of accumulated wisdom about what actually works at scale.</p>
+
+        <p>The key architectural choices are:</p>
+
+        <ol>
+          <li><strong>RMSNorm instead of LayerNorm</strong> — Simpler, faster, and empirically just as good</li>
+          <li><strong>Rotary Position Embeddings (RoPE)</strong> — Encodes position through rotation rather than addition</li>
+          <li><strong>SwiGLU activation</strong> — A gated variant that outperforms ReLU and GELU</li>
+          <li><strong>Grouped-Query Attention (GQA)</strong> — A middle ground between full attention and multi-query attention</li>
+          <li><strong>Pre-normalization</strong> — Normalize before each sublayer, not after</li>
+        </ol>
+
+        <p>None of these are LLaMA inventions—they've all appeared in prior work. But LLaMA showed that this particular combination scales remarkably well, and LLaMA 3 refined the recipe further with larger vocabularies and better training data.</p>
+
+        <p>Let's build each piece.</p>
+
+        <h2>Setting up the configuration</h2>
+
+        <p>First, we need a way to specify model hyperparameters. I like using dataclasses for this because they're clean and self-documenting:</p>
+
+<pre><code class="language-python">from dataclasses import dataclass
+from typing import Optional
+
+@dataclass
+class LlamaConfig:
+    dim: int = 4096                # Model dimension
+    n_layers: int = 32             # Number of transformer layers
+    n_heads: int = 32              # Number of attention heads
+    n_kv_heads: Optional[int] = 8  # Number of key/value heads (for GQA)
+    vocab_size: int = 128256       # Vocabulary size
+    hidden_dim: int = 14336        # FFN hidden dimension
+    max_seq_len: int = 8192        # Maximum sequence length
+    norm_eps: float = 1e-5         # Epsilon for RMSNorm
+    rope_theta: float = 500000.0   # Base for RoPE frequencies</code></pre>
+
+        <p>A few things to note here. The <code>n_kv_heads</code> parameter is what enables grouped-query attention—when it's smaller than <code>n_heads</code>, multiple query heads share the same key-value heads. The <code>rope_theta</code> value of 500,000 is notably higher than the original 10,000 used in LLaMA 1; this was increased in LLaMA 3 to better support longer context lengths.</p>
+
+        <p>The vocabulary size of 128,256 is also significant—it's much larger than LLaMA 2's 32,000 tokens. A larger vocabulary means the model can represent text more efficiently (fewer tokens per sentence), which effectively extends the context window for free.</p>
+
+        <h2>RMSNorm: Simplicity wins</h2>
+
+        <p>Let's start with the normalization layer. Standard LayerNorm computes both the mean and variance of the input, then normalizes:</p>
+
+        <div class="math-display">
+          $$\text{LayerNorm}(x) = \gamma \cdot \frac{x - \mu}{\sqrt{\sigma^2 + \epsilon}} + \beta$$
+        </div>
+
+        <p>RMSNorm drops the mean centering and the bias term entirely:</p>
+
+        <div class="math-display">
+          $$\text{RMSNorm}(x) = \gamma \cdot \frac{x}{\sqrt{\frac{1}{n}\sum_{i=1}^{n} x_i^2 + \epsilon}}$$
+        </div>
+
+        <p>Why does this work? The intuition is that what matters most for normalization is controlling the scale of activations, not their center. The mean-centering in LayerNorm doesn't seem to help much empirically, and removing it makes the operation simpler and faster.</p>
+
+        <p>Here's the implementation:</p>
+
+<pre><code class="language-python">import torch
+import torch.nn as nn
+
+class RMSNorm(nn.Module):
+    def __init__(self, dim: int, eps: float = 1e-6):
+        super().__init__()
+        self.eps = eps
+        self.weight = nn.Parameter(torch.ones(dim))
+    
+    def _norm(self, x: torch.Tensor) -> torch.Tensor:
+        # Compute RMS along last dimension
+        return x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
+    
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # Cast to float32 for numerical stability, then back
+        output = self._norm(x.float()).type_as(x)
+        return output * self.weight</code></pre>
+
+        <p>The <code>type_as(x)</code> call is important—it ensures we maintain the input's dtype (which might be float16 or bfloat16) while doing the normalization in float32 for numerical stability. This is a common pattern you'll see throughout the implementation.</p>
+
+        <h2>Rotary Position Embeddings</h2>
+
+        <p>Position encoding in transformers is one of those topics that seems simple on the surface but has surprising depth. The original transformer used sinusoidal position embeddings that were added to the input. BERT and GPT-2 used learned position embeddings. RoPE takes a different approach: it encodes position by rotating the query and key vectors.</p>
+
+        <p>The core insight is that if we rotate queries and keys by angles proportional to their positions, the dot product between them will naturally encode relative position information. Two tokens that are close together will have similar rotations; tokens far apart will have very different rotations.</p>
+
+        <p>The mathematical formulation looks like this. For a 2D vector at position $m$:</p>
+
+        <div class="math-display">
+          $$\text{RoPE}(x, m) = \begin{pmatrix} \cos(m\theta) & -\sin(m\theta) \\ \sin(m\theta) & \cos(m\theta) \end{pmatrix} \begin{pmatrix} x_0 \\ x_1 \end{pmatrix}$$
+        </div>
+
+        <p>For higher dimensions, we apply this rotation to pairs of dimensions, each with a different frequency $\theta_i$. The frequencies follow a geometric progression, similar to the original sinusoidal embeddings.</p>
+
+        <p>Let me break down the implementation step by step:</p>
+
+<pre><code class="language-python">def precompute_rope_frequencies(dim: int, max_seq_len: int, theta: float = 10000.0):
+    """
+    Precompute the complex exponentials for RoPE.
+    
+    We compute e^(i * m * theta) for each position m and frequency theta,
+    which gives us cos(m*theta) + i*sin(m*theta). This is more efficient
+    than computing sin and cos separately.
+    """
+    # Compute inverse frequencies: theta_i = 1 / (theta^(2i/dim))
+    freqs = 1.0 / (theta ** (torch.arange(0, dim, 2).float() / dim))
+    
+    # Create position indices
+    positions = torch.arange(max_seq_len)
+    
+    # Outer product gives us all position-frequency combinations
+    # Shape: (max_seq_len, dim/2)
+    angles = torch.outer(positions, freqs)
+    
+    # Convert to complex exponentials: e^(i*angle) = cos(angle) + i*sin(angle)
+    freqs_cis = torch.polar(torch.ones_like(angles), angles)
+    
+    return freqs_cis</code></pre>
+
+        <p>Now for the actual rotation:</p>
+
+<pre><code class="language-python">def apply_rotary_embeddings(
+    xq: torch.Tensor,  # Queries: (batch, seq_len, n_heads, head_dim)
+    xk: torch.Tensor,  # Keys: (batch, seq_len, n_kv_heads, head_dim)
+    freqs_cis: torch.Tensor  # Precomputed frequencies
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """
+    Apply rotary embeddings to queries and keys.
+    
+    The trick here is to view the real-valued tensors as complex numbers,
+    multiply by our precomputed complex exponentials (which performs rotation),
+    then convert back to real.
+    """
+    # Reshape to pairs of values and view as complex
+    # (batch, seq_len, n_heads, head_dim) -> (batch, seq_len, n_heads, head_dim/2, 2)
+    xq_pairs = xq.float().reshape(*xq.shape[:-1], -1, 2)
+    xk_pairs = xk.float().reshape(*xk.shape[:-1], -1, 2)
+    
+    # View as complex: (batch, seq_len, n_heads, head_dim/2)
+    xq_complex = torch.view_as_complex(xq_pairs)
+    xk_complex = torch.view_as_complex(xk_pairs)
+    
+    # Reshape freqs for broadcasting: (1, seq_len, 1, head_dim/2)
+    freqs_cis = freqs_cis.unsqueeze(0).unsqueeze(2)
+    
+    # Apply rotation via complex multiplication
+    xq_rotated = xq_complex * freqs_cis
+    xk_rotated = xk_complex * freqs_cis
+    
+    # Convert back to real and reshape
+    xq_out = torch.view_as_real(xq_rotated).flatten(-2)
+    xk_out = torch.view_as_real(xk_rotated).flatten(-2)
+    
+    return xq_out.type_as(xq), xk_out.type_as(xk)</code></pre>
+
+        <p>I find the complex number trick elegant—it lets us express rotation concisely without writing out all the sin/cos terms explicitly. Under the hood, complex multiplication is exactly the 2D rotation we want.</p>
+
+        <h2>Grouped-Query Attention</h2>
+
+        <p>Standard multi-head attention uses separate key and value projections for each head. This works well but becomes expensive during inference because we need to cache all those key-value pairs for every token we've seen (the infamous KV cache).</p>
+
+        <p>Multi-query attention (MQA), introduced in 2019, went to the opposite extreme: a single key-value head shared across all query heads. This dramatically reduces the KV cache size but can hurt model quality.</p>
+
+        <p>Grouped-query attention is the compromise. We use fewer KV heads than query heads, but more than one. LLaMA 3 8B uses 32 query heads and 8 KV heads, meaning each KV head is shared by 4 query heads. This gives us most of the memory savings of MQA while maintaining quality closer to full MHA.</p>
+
+        <p>Here's the attention implementation:</p>
+
+<pre><code class="language-python">class Attention(nn.Module):
+    def __init__(self, config: LlamaConfig):
+        super().__init__()
+        self.n_heads = config.n_heads
+        self.n_kv_heads = config.n_kv_heads or config.n_heads
+        self.head_dim = config.dim // config.n_heads
+        self.n_rep = self.n_heads // self.n_kv_heads  # How many times to repeat KV
+        
+        # Projections
+        self.wq = nn.Linear(config.dim, config.n_heads * self.head_dim, bias=False)
+        self.wk = nn.Linear(config.dim, self.n_kv_heads * self.head_dim, bias=False)
+        self.wv = nn.Linear(config.dim, self.n_kv_heads * self.head_dim, bias=False)
+        self.wo = nn.Linear(config.n_heads * self.head_dim, config.dim, bias=False)
+    
+    def forward(
+        self,
+        x: torch.Tensor,
+        freqs_cis: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
+        batch_size, seq_len, _ = x.shape
+        
+        # Project to queries, keys, values
+        xq = self.wq(x).view(batch_size, seq_len, self.n_heads, self.head_dim)
+        xk = self.wk(x).view(batch_size, seq_len, self.n_kv_heads, self.head_dim)
+        xv = self.wv(x).view(batch_size, seq_len, self.n_kv_heads, self.head_dim)
+        
+        # Apply rotary embeddings to queries and keys
+        xq, xk = apply_rotary_embeddings(xq, xk, freqs_cis)
+        
+        # Repeat KV heads to match query heads for GQA
+        xk = self._repeat_kv(xk)
+        xv = self._repeat_kv(xv)
+        
+        # Transpose for attention: (batch, n_heads, seq_len, head_dim)
+        xq = xq.transpose(1, 2)
+        xk = xk.transpose(1, 2)
+        xv = xv.transpose(1, 2)
+        
+        # Scaled dot-product attention
+        scale = self.head_dim ** -0.5
+        scores = torch.matmul(xq, xk.transpose(-2, -1)) * scale
+        
+        if mask is not None:
+            scores = scores + mask
+        
+        attn_weights = torch.softmax(scores.float(), dim=-1).type_as(xq)
+        output = torch.matmul(attn_weights, xv)
+        
+        # Reshape and project output
+        output = output.transpose(1, 2).contiguous().view(batch_size, seq_len, -1)
+        return self.wo(output)
+    
+    def _repeat_kv(self, x: torch.Tensor) -> torch.Tensor:
+        """Repeat KV heads to match number of query heads."""
+        if self.n_rep == 1:
+            return x
+        batch, seq_len, n_kv_heads, head_dim = x.shape
+        x = x.unsqueeze(3).expand(batch, seq_len, n_kv_heads, self.n_rep, head_dim)
+        return x.reshape(batch, seq_len, self.n_heads, head_dim)</code></pre>
+
+        <p>The <code>_repeat_kv</code> method is where GQA happens. We're literally repeating each KV head to match the number of query heads that need it. During inference with KV caching, this repeat happens after we retrieve from the cache, so we still get the memory savings.</p>
+
+        <h2>SwiGLU: The feed-forward network</h2>
+
+        <p>The feed-forward network in transformers is often overlooked, but it's where most of the parameters live. The original transformer used a simple two-layer MLP with ReLU activation:</p>
+
+        <div class="math-display">
+          $$\text{FFN}(x) = \text{ReLU}(xW_1)W_2$$
+        </div>
+
+        <p>SwiGLU, introduced by Noam Shazeer in 2020, uses a gated linear unit with the Swish activation:</p>
+
+        <div class="math-display">
+          $$\text{SwiGLU}(x) = (\text{Swish}(xW_1) \odot xW_3)W_2$$
+        </div>
+
+        <p>The $\odot$ is element-wise multiplication—this is the "gating" part. One pathway computes the actual transformation; the other computes a gate that modulates it. This gives the network more expressive power for the same parameter count.</p>
+
+        <p>One subtlety: because we have three weight matrices instead of two, we typically reduce the hidden dimension to keep parameter count comparable. LLaMA uses $\frac{2}{3} \times 4d$ for the hidden dimension, where $d$ is the model dimension.</p>
+
+<pre><code class="language-python">class FeedForward(nn.Module):
+    def __init__(self, config: LlamaConfig):
+        super().__init__()
+        # The hidden_dim in config already accounts for SwiGLU sizing
+        self.w1 = nn.Linear(config.dim, config.hidden_dim, bias=False)  # Gate projection
+        self.w2 = nn.Linear(config.hidden_dim, config.dim, bias=False)  # Down projection
+        self.w3 = nn.Linear(config.dim, config.hidden_dim, bias=False)  # Up projection
+    
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # SwiGLU: swish(x @ W1) * (x @ W3) @ W2
+        return self.w2(nn.functional.silu(self.w1(x)) * self.w3(x))</code></pre>
+
+        <p>Note that <code>silu</code> is PyTorch's name for the Swish activation: $\text{Swish}(x) = x \cdot \sigma(x)$, where $\sigma$ is the sigmoid function.</p>
+
+        <h2>The transformer block</h2>
+
+        <p>Now we can assemble a complete transformer block. LLaMA uses pre-normalization—the norm comes before each sublayer, not after:</p>
+
+<pre><code class="language-python">class TransformerBlock(nn.Module):
+    def __init__(self, config: LlamaConfig):
+        super().__init__()
+        self.attention = Attention(config)
+        self.feed_forward = FeedForward(config)
+        self.attention_norm = RMSNorm(config.dim, eps=config.norm_eps)
+        self.ffn_norm = RMSNorm(config.dim, eps=config.norm_eps)
+    
+    def forward(
+        self,
+        x: torch.Tensor,
+        freqs_cis: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
+        # Pre-norm attention with residual
+        h = x + self.attention(self.attention_norm(x), freqs_cis, mask)
+        # Pre-norm FFN with residual
+        out = h + self.feed_forward(self.ffn_norm(h))
+        return out</code></pre>
+
+        <p>Pre-normalization has become the standard for large language models. The original "post-norm" architecture (normalize after the residual) can be unstable during training, requiring careful learning rate warmup. Pre-norm is more stable and often trains faster.</p>
+
+        <h2>Putting it all together</h2>
+
+        <p>Finally, the complete model:</p>
+
+<pre><code class="language-python">class Llama(nn.Module):
+    def __init__(self, config: LlamaConfig):
+        super().__init__()
+        self.config = config
+        
+        # Token embeddings
+        self.tok_embeddings = nn.Embedding(config.vocab_size, config.dim)
+        
+        # Transformer layers
+        self.layers = nn.ModuleList([
+            TransformerBlock(config) for _ in range(config.n_layers)
+        ])
+        
+        # Final norm and output projection
+        self.norm = RMSNorm(config.dim, eps=config.norm_eps)
+        self.output = nn.Linear(config.dim, config.vocab_size, bias=False)
+        
+        # Precompute RoPE frequencies
+        self.freqs_cis = precompute_rope_frequencies(
+            config.dim // config.n_heads,
+            config.max_seq_len * 2,  # Extra length for safety
+            config.rope_theta
+        )
+    
+    def forward(
+        self,
+        tokens: torch.Tensor,
+        start_pos: int = 0,
+    ) -> torch.Tensor:
+        batch_size, seq_len = tokens.shape
+        
+        # Get embeddings
+        h = self.tok_embeddings(tokens)
+        
+        # Get RoPE frequencies for this sequence
+        freqs_cis = self.freqs_cis[start_pos:start_pos + seq_len].to(h.device)
+        
+        # Create causal mask
+        mask = None
+        if seq_len > 1:
+            mask = torch.full((seq_len, seq_len), float("-inf"), device=tokens.device)
+            mask = torch.triu(mask, diagonal=1)
+            # For batched inference with KV cache, we'd adjust this
+        
+        # Forward through all layers
+        for layer in self.layers:
+            h = layer(h, freqs_cis, mask)
+        
+        # Final norm and project to vocabulary
+        h = self.norm(h)
+        logits = self.output(h)
+        
+        return logits</code></pre>
+
+        <h2>A note on KV caching</h2>
+
+        <p>The implementation above is complete for training, but for efficient inference you'd want to add KV caching. The idea is simple: during autoregressive generation, we only process one new token at a time, but attention needs to see all previous tokens. Rather than recomputing keys and values for the entire sequence at each step, we cache them.</p>
+
+        <p>I've omitted the caching logic to keep the core architecture clear, but adding it is straightforward—you'd modify the <code>Attention</code> class to maintain a cache and concatenate new KV pairs to it at each step.</p>
+
+        <h2>Testing our implementation</h2>
+
+        <p>Let's verify the shapes work out correctly:</p>
+
+<pre><code class="language-python">def test_model():
+    # Small config for testing
+    config = LlamaConfig(
+        dim=512,
+        n_layers=4,
+        n_heads=8,
+        n_kv_heads=2,
+        vocab_size=1000,
+        hidden_dim=1024,
+        max_seq_len=256,
+    )
+    
+    model = Llama(config)
+    
+    # Count parameters
+    n_params = sum(p.numel() for p in model.parameters())
+    print(f"Model has {n_params / 1e6:.2f}M parameters")
+    
+    # Test forward pass
+    batch_size, seq_len = 2, 64
+    tokens = torch.randint(0, config.vocab_size, (batch_size, seq_len))
+    
+    logits = model(tokens)
+    print(f"Input shape: {tokens.shape}")
+    print(f"Output shape: {logits.shape}")
+    
+    assert logits.shape == (batch_size, seq_len, config.vocab_size)
+    print("All shapes correct!")
+
+test_model()</code></pre>
+
+        <h2>What we didn't cover</h2>
+
+        <p>This implementation captures the core architecture, but a production LLaMA 3 has additional engineering:</p>
+
+        <ul>
+          <li><strong>Tensor parallelism</strong> — Splitting the model across multiple GPUs</li>
+          <li><strong>Flash Attention</strong> — Memory-efficient attention implementation</li>
+          <li><strong>Quantization</strong> — Running in int8 or int4 for efficiency</li>
+          <li><strong>Speculative decoding</strong> — Using a smaller model to draft tokens</li>
+        </ul>
+
+        <p>These are important for deployment but orthogonal to understanding the architecture itself.</p>
+
+        <h2>Final thoughts</h2>
+
+        <p>What strikes me most about LLaMA 3's architecture is how conservative it is. There are no revolutionary new mechanisms—just well-chosen, battle-tested components assembled carefully. RMSNorm, RoPE, SwiGLU, and GQA all predated LLaMA. The innovation is in the training: the data mixture, the scaling laws, the careful hyperparameter tuning.</p>
+
+        <p>This is a useful lesson. In deep learning, architecture matters less than you might think. What matters more is having enough data, enough compute, and the engineering discipline to use them well.</p>
+
+        <p>That said, understanding the architecture deeply—being able to implement it yourself—is what lets you make informed decisions about when to deviate from it. Maybe you need longer context and want to experiment with different position encodings. Maybe you're deploying on edge devices and need to understand which components can be compressed. Maybe you're researching new attention mechanisms and need a clean baseline to compare against.</p>
+
+        <p>Whatever the reason, there's no substitute for getting your hands dirty with the code.</p>
+      </div>
+      
+      <footer class="blog-footer">
+        <a href="../index.html#blog" class="blog-footer-link">
+          <ion-icon name="arrow-back"></ion-icon>
+          <span>Back to all posts</span>
+        </a>
+      </footer>
+    </article>
+    
+    <!-- Site Footer -->
+    <footer class="site-footer">
+      <div class="site-footer-content">
+        <p class="copyright">© 2026 Mardhiyah Sanni</p>
+        <p class="ai-disclosure">Some content created in collaboration with generative AI.</p>
+      </div>
+    </footer>
+  </div>
+  
+  <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+  
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    }
+    
+    window.addEventListener('scroll', () => {
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const scrolled = (window.scrollY / docHeight) * 100;
+      document.getElementById('reading-progress').style.width = scrolled + '%';
+    });
+    
+    document.addEventListener('DOMContentLoaded', () => { hljs.highlightAll(); });
+  </script>
+  
+  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+</body>
+</html>

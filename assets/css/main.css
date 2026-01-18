@@ -1627,3 +1627,42 @@ img {
 .references a {
   word-break: break-word;
 }
+
+/* =================================================================
+   SITE FOOTER
+   Consistent footer for all pages
+================================================================= */
+
+.site-footer {
+  text-align: center;
+  padding: var(--space-6) var(--space-4);
+  margin-top: var(--space-8);
+  border-top: 1px solid var(--border);
+  background: var(--bg-surface);
+}
+
+.site-footer-content {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.site-footer p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.6;
+}
+
+.site-footer p:first-child {
+  margin-bottom: var(--space-1);
+}
+
+.site-footer .copyright {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.site-footer .ai-disclosure {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
