@@ -968,6 +968,134 @@ img {
   letter-spacing: 0.05em;
 }
 
+/* ================= PUBLICATIONS LIST (Academic Style) ================= */
+.publications-list {
+  display: none;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.publications-list.active {
+  display: flex;
+}
+
+.publication-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  transition: all var(--duration) var(--ease);
+  text-decoration: none;
+  color: inherit;
+}
+
+.publication-item:hover {
+  border-color: var(--accent);
+  transform: translateX(4px);
+}
+
+.publication-venue {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 70px;
+  min-width: 70px;
+  padding: var(--space-2);
+  background: var(--accent-glow);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.publication-venue-name {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.publication-venue-year {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.publication-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.publication-title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--text-primary);
+  line-height: 1.4;
+  margin-bottom: var(--space-2);
+  transition: color var(--duration) var(--ease);
+}
+
+.publication-item:hover .publication-title {
+  color: var(--accent);
+}
+
+.publication-authors {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: var(--space-2);
+}
+
+.publication-authors strong {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.publication-details {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.publication-status {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-glow);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  margin-top: var(--space-2);
+  font-style: normal;
+}
+
+@media (max-width: 640px) {
+  .publication-item {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  
+  .publication-venue {
+    width: auto;
+    flex-direction: row;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+  }
+  
+  .publication-venue-year {
+    margin-top: 0;
+  }
+}
+
 /* ================= BLOG SECTION ================= */
 .blog-grid {
   display: flex;

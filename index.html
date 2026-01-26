@@ -518,6 +518,94 @@
             </div>
           </a>
         </div>
+
+        <!-- Academic-style Publications List (shown when Publications filter selected) -->
+        <div class="publications-list" id="publications-list">
+          <a href="https://aclanthology.org/2024.acl-long.113/" class="publication-item" target="_blank" rel="noopener">
+            <div class="publication-venue">
+              <span class="publication-venue-name">ACL</span>
+              <span class="publication-venue-year">2024</span>
+            </div>
+            <div class="publication-content">
+              <h3 class="publication-title">SparseFit: Few-shot Prompting with Sparse Fine-tuning for Jointly Generating Predictions and Natural Language Explanations</h3>
+              <p class="publication-authors">Jesus Solano, <strong>Mardhiyah Sanni</strong>, Oana-Maria Camburu, and Pasquale Minervini</p>
+              <p class="publication-details">Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers), pages 2053–2077, Bangkok, Thailand</p>
+            </div>
+          </a>
+
+          <a href="https://aclanthology.org/2025.naacl-long.426/" class="publication-item" target="_blank" rel="noopener">
+            <div class="publication-venue">
+              <span class="publication-venue-name">NAACL</span>
+              <span class="publication-venue-year">2025</span>
+            </div>
+            <div class="publication-content">
+              <h3 class="publication-title">AfriSpeech-Dialog: A Benchmark Dataset for Spontaneous English Conversations in Healthcare and Beyond</h3>
+              <p class="publication-authors"><strong>Mardhiyah Sanni</strong> et al.</p>
+              <p class="publication-details">Proceedings of the 2025 Conference of the Nations of the Americas Chapter of the Association for Computational Linguistics: Human Language Technologies (Volume 1: Long Papers), pages 8399-8417, Albuquerque, New Mexico</p>
+            </div>
+          </a>
+
+          <a href="https://aclanthology.org/2025.acl-long.96/" class="publication-item" target="_blank" rel="noopener">
+            <div class="publication-venue">
+              <span class="publication-venue-name">ACL</span>
+              <span class="publication-venue-year">2025</span>
+            </div>
+            <div class="publication-content">
+              <h3 class="publication-title">AfriMed-QA: A Pan-African, Multi-Specialty, Medical Question-Answering Benchmark Dataset</h3>
+              <p class="publication-authors">Charles Nimo, Tobi Olatunji, Abraham Toluwase Owodunni, Tassallah Abdullahi, Emmanuel Ayodele, <strong>Mardhiyah Sanni</strong> et al.</p>
+              <p class="publication-details">Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers), pages 1948–1973, Vienna, Austria</p>
+              <span class="publication-status">Best Social Impact Paper</span>
+            </div>
+          </a>
+
+          <a href="https://aclanthology.org/2025.ijcnlp-long.190/" class="publication-item" target="_blank" rel="noopener">
+            <div class="publication-venue">
+              <span class="publication-venue-name">IJCNLP-AACL</span>
+              <span class="publication-venue-year">2025</span>
+            </div>
+            <div class="publication-content">
+              <h3 class="publication-title">AfriSpeech-MultiBench: A Verticalized Multidomain Multicountry Benchmark Suite for African Accented English ASR</h3>
+              <p class="publication-authors">Gabrial Zencha Ashungafac, <strong>Mardhiyah Sanni</strong>, Busayo Awobade, Alex Gichamba, Tobi Olatunji</p>
+              <p class="publication-details">Presented at IJCNLP-AACL Main Conference, Suzhou, China</p>
+            </div>
+          </a>
+
+          <a href="https://openreview.net/forum?id=tpKjdTuDmp" class="publication-item" target="_blank" rel="noopener">
+            <div class="publication-venue">
+              <span class="publication-venue-name">EACL</span>
+              <span class="publication-venue-year">2026</span>
+            </div>
+            <div class="publication-content">
+              <h3 class="publication-title">AfriVox: Probing Multilingual and Accent Robustness of Speech LLMs</h3>
+              <p class="publication-authors">Busayo Awobade, <strong>Mardhiyah Sanni</strong>, Tassallah Abdullahi, Chibuzor Okocha, Kelechi Ezema, Devendra Deepak Kayande, Lukman Enegi Ismaila, Tobi Olatunji, Gloria Ashiya Katuka</p>
+              <p class="publication-details">Accepted to EACL Main Conference</p>
+            </div>
+          </a>
+
+          <a href="https://openreview.net/forum?id=VZ3XrC9Mpy" class="publication-item" target="_blank" rel="noopener">
+            <div class="publication-venue">
+              <span class="publication-venue-name">Under Review</span>
+              <span class="publication-venue-year">2025</span>
+            </div>
+            <div class="publication-content">
+              <h3 class="publication-title">Kakugo: Distillation of Low-Resource Languages into Small Language Models</h3>
+              <p class="publication-authors">Peter Devine, <strong>Mardhiyah Sanni</strong>, Farid Adilazuarda, Julieta Loizaga, Barry Haddow</p>
+              <p class="publication-details">Under Review</p>
+            </div>
+          </a>
+
+          <a href="https://arxiv.org/abs/2501.15310" class="publication-item" target="_blank" rel="noopener">
+            <div class="publication-venue">
+              <span class="publication-venue-name">arXiv</span>
+              <span class="publication-venue-year">2025</span>
+            </div>
+            <div class="publication-content">
+              <h3 class="publication-title">The Multicultural Medical Assistant: Can LLMs Improve Medical ASR Errors Across Borders?</h3>
+              <p class="publication-authors">Ayo Adedeji, <strong>Mardhiyah Sanni</strong>, Emmanuel Ayodele, Sarita Joshi, Tobi Olatunji</p>
+              <p class="publication-details">Preprint</p>
+            </div>
+          </a>
+        </div>
       </section>
 
       <!-- ==================== BLOG SECTION ==================== -->
@@ -674,6 +762,8 @@
       // Portfolio filtering
       const filterTabs = document.querySelectorAll('.filter-tab');
       const projectCards = document.querySelectorAll('.project-card');
+      const projectsGrid = document.querySelector('.projects-grid');
+      const publicationsList = document.getElementById('publications-list');
       
       filterTabs.forEach(tab => {
         tab.addEventListener('click', () => {
@@ -682,14 +772,25 @@
           filterTabs.forEach(t => t.classList.remove('active'));
           tab.classList.add('active');
           
-          projectCards.forEach(card => {
-            const category = card.dataset.category;
-            if (filter === 'all' || category === filter) {
-              card.classList.add('active');
-            } else {
-              card.classList.remove('active');
-            }
-          });
+          // Toggle between grid view and publications list
+          if (filter === 'publications') {
+            // Show academic-style publications list, hide grid
+            projectsGrid.style.display = 'none';
+            publicationsList.classList.add('active');
+          } else {
+            // Show grid, hide publications list
+            projectsGrid.style.display = 'grid';
+            publicationsList.classList.remove('active');
+            
+            projectCards.forEach(card => {
+              const category = card.dataset.category;
+              if (filter === 'all' || category === filter) {
+                card.classList.add('active');
+              } else {
+                card.classList.remove('active');
+              }
+            });
+          }
         });
       });
     });
