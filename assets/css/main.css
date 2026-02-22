@@ -628,6 +628,26 @@ img {
   z-index: 1;
 }
 
+.personal-note {
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.personal-note a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+  font-style: normal;
+}
+
+.personal-note a:hover {
+  text-decoration: underline;
+}
+
 /* ================= RESUME SECTION ================= */
 .resume-block {
   margin-bottom: var(--space-7);
