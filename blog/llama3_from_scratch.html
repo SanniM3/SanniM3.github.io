@@ -76,7 +76,7 @@
 
         <p>This isn't going to be a line-by-line commentary on Meta's official implementation. Instead, I want to walk through the architecture decisions that make LLaMA 3 what it is, explain why those decisions matter, and implement each component in a way that's both correct and readable. By the end, you'll have a working model that you could, in principle, train on your own data.</p>
 
-        <p>Fair warning: I'm going to assume you're comfortable with PyTorch and have a basic understanding of transformer architectures. If terms like "attention heads" or "layer normalization" are unfamiliar, you might want to start with a more introductory resource first.</p>
+        <p>Fair warning: I'm going to assume you're comfortable with PyTorch and have a basic understanding of transformer architectures. If terms like "attention heads" or "layer normalisation" are unfamiliar, you might want to start with a more introductory resource first.</p>
 
         <h2>What makes LLaMA 3 different?</h2>
 
@@ -89,7 +89,7 @@
           <li><strong>Rotary Position Embeddings (RoPE)</strong> — Encodes position through rotation rather than addition</li>
           <li><strong>SwiGLU activation</strong> — A gated variant that outperforms ReLU and GELU</li>
           <li><strong>Grouped-Query Attention (GQA)</strong> — A middle ground between full attention and multi-query attention</li>
-          <li><strong>Pre-normalization</strong> — Normalize before each sublayer, not after</li>
+          <li><strong>Pre-normalisation</strong> — Normalise before each sublayer, not after</li>
         </ol>
 
         <p>None of these are LLaMA inventions—they've all appeared in prior work. But LLaMA showed that this particular combination scales remarkably well, and LLaMA 3 refined the recipe further with larger vocabularies and better training data.</p>
@@ -121,19 +121,19 @@ class LlamaConfig:
 
         <h2>RMSNorm: Simplicity wins</h2>
 
-        <p>Let's start with the normalization layer. Standard LayerNorm computes both the mean and variance of the input, then normalizes:</p>
+        <p>Let's start with the normalisation layer. Standard LayerNorm computes both the mean and variance of the input, then normalises:</p>
 
         <div class="math-display">
           $$\text{LayerNorm}(x) = \gamma \cdot \frac{x - \mu}{\sqrt{\sigma^2 + \epsilon}} + \beta$$
         </div>
 
-        <p>RMSNorm drops the mean centering and the bias term entirely:</p>
+        <p>RMSNorm drops the mean centring and the bias term entirely:</p>
 
         <div class="math-display">
           $$\text{RMSNorm}(x) = \gamma \cdot \frac{x}{\sqrt{\frac{1}{n}\sum_{i=1}^{n} x_i^2 + \epsilon}}$$
         </div>
 
-        <p>Why does this work? The intuition is that what matters most for normalization is controlling the scale of activations, not their center. The mean-centering in LayerNorm doesn't seem to help much empirically, and removing it makes the operation simpler and faster.</p>
+        <p>Why does this work? The intuition is that what matters most for normalisation is controlling the scale of activations, not their centre. The mean-centring in LayerNorm doesn't seem to help much empirically, and removing it makes the operation simpler and faster.</p>
 
         <p>Here's the implementation:</p>
 
@@ -155,7 +155,7 @@ class RMSNorm(nn.Module):
         output = self._norm(x.float()).type_as(x)
         return output * self.weight</code></pre>
 
-        <p>The <code>type_as(x)</code> call is important—it ensures we maintain the input's dtype (which might be float16 or bfloat16) while doing the normalization in float32 for numerical stability. This is a common pattern you'll see throughout the implementation.</p>
+        <p>The <code>type_as(x)</code> call is important—it ensures we maintain the input's dtype (which might be float16 or bfloat16) while doing the normalisation in float32 for numerical stability. This is a common pattern you'll see throughout the implementation.</p>
 
         <h2>Rotary Position Embeddings</h2>
 
@@ -341,7 +341,7 @@ class RMSNorm(nn.Module):
 
         <h2>The transformer block</h2>
 
-        <p>Now we can assemble a complete transformer block. LLaMA uses pre-normalization—the norm comes before each sublayer, not after:</p>
+        <p>Now we can assemble a complete transformer block. LLaMA uses pre-normalisation—the norm comes before each sublayer, not after:</p>
 
 <pre><code class="language-python">class TransformerBlock(nn.Module):
     def __init__(self, config: LlamaConfig):
@@ -363,7 +363,7 @@ class RMSNorm(nn.Module):
         out = h + self.feed_forward(self.ffn_norm(h))
         return out</code></pre>
 
-        <p>Pre-normalization has become the standard for large language models. The original "post-norm" architecture (normalize after the residual) can be unstable during training, requiring careful learning rate warmup. Pre-norm is more stable and often trains faster.</p>
+        <p>Pre-normalisation has become the standard for large language models. The original "post-norm" architecture (normalise after the residual) can be unstable during training, requiring careful learning rate warmup. Pre-norm is more stable and often trains faster.</p>
 
         <h2>Putting it all together</h2>
 

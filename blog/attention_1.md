@@ -12,7 +12,7 @@ When sequences were short—thirty tokens, maybe a hundred—this didn’t matte
 
 This quadratic explosion is only the start of the trouble.
 
-What makes attention truly painful is not just the math, rather, it’s the memory traffic behind the math. GPUs are spectacular at dense matrix multiplies, but only when the data lives close to the compute. As soon as you start thrashing high-bandwidth memory (HBM), performance collapses. And the naive implementation of attention thrashes HBM with almost gleeful abandon. Every time it forms the attention matrix $QK^T$, it reads the full query matrix, the full key matrix, writes the full matrix of pairwise scores, reads it again for softmax, writes the normalized weights, reads them again to multiply by $V$, and finally writes the output. Each of these is a large, dense tensor the GPU has to pull in and out of memory, even though only a small slice of it is “hot” at any given time.
+What makes attention truly painful is not just the math, rather, it’s the memory traffic behind the math. GPUs are spectacular at dense matrix multiplies, but only when the data lives close to the compute. As soon as you start thrashing high-bandwidth memory (HBM), performance collapses. And the naive implementation of attention thrashes HBM with almost gleeful abandon. Every time it forms the attention matrix $QK^T$, it reads the full query matrix, the full key matrix, writes the full matrix of pairwise scores, reads it again for softmax, writes the normalised weights, reads them again to multiply by $V$, and finally writes the output. Each of these is a large, dense tensor the GPU has to pull in and out of memory, even though only a small slice of it is “hot” at any given time.
 
 At sufficient scale, attention becomes less of a mathematical operation and more of a memory-shuffling ceremony.
 
@@ -74,7 +74,7 @@ Here’s an approximate sketch of what happens inside the GPU during naive atten
 1. Read Q and K from HBM.  
 2. Compute $QK^T$ and write the full matrix to HBM.  
 3. Read the full matrix back from HBM for softmax.  
-4. Write the normalized attention weights to HBM.  
+4. Write the normalised attention weights to HBM.  
 5. Read those weights again to multiply them by V.  
 6. Write the final output.
 
@@ -134,7 +134,7 @@ And this must be computed for every head in every layer.
 
 No GPU can sustainably handle this load.
 
-This is where FlashAttention enters the story. FlashAttention avoids ever materializing the full attention matrix. Instead, it splits the computation into small tiles that fit entirely in fast on-chip memory, streams through the sequence in a single pass, and performs softmax in a numerically stable way without needing the full matrix.
+This is where FlashAttention enters the story. FlashAttention avoids ever materialising the full attention matrix. Instead, it splits the computation into small tiles that fit entirely in fast on-chip memory, streams through the sequence in a single pass, and performs softmax in a numerically stable way without needing the full matrix.
 
 It does the same math, but it does it in a way the hardware likes.
 

@@ -87,10 +87,10 @@
         <ul>
           <li><strong>Weights</strong>: $d \times k$ parameters</li>
           <li><strong>Gradients</strong>: Another $d \times k$ values</li>
-          <li><strong>Optimizer states</strong>: For Adam, that's 2× more ($d \times k$ each for momentum and variance)</li>
+          <li><strong>Optimiser states</strong>: For Adam, that's 2× more ($d \times k$ each for momentum and variance)</li>
         </ul>
 
-        <p>So for each weight matrix, you need roughly 4× the parameters in memory during training (weights + gradients + 2 optimizer states). For a 7B parameter model in float32, that's about 112GB just for these components—before you even account for activations.</p>
+        <p>So for each weight matrix, you need roughly 4× the parameters in memory during training (weights + gradients + 2 optimiser states). For a 7B parameter model in float32, that's about 112GB just for these components—before you even account for activations.</p>
 
         <p>The question LoRA asks is: do we really need all those parameters?</p>
 
@@ -211,7 +211,7 @@ class LoRALinear(nn.Module):
 
         <p>A few important details here:</p>
 
-        <p><strong>Initialization matters.</strong> Matrix $A$ is initialized with a small random distribution (Kaiming uniform), but $B$ is initialized to zero. This means at the start of training, $\Delta W = BA = 0$, so the model behaves exactly like the pretrained model. This is crucial—you don't want to destroy the pretrained knowledge on the first forward pass.</p>
+        <p><strong>Initialisation matters.</strong> Matrix $A$ is initialised with a small random distribution (Kaiming uniform), but $B$ is initialised to zero. This means at the start of training, $\Delta W = BA = 0$, so the model behaves exactly like the pretrained model. This is crucial—you don't want to destroy the pretrained knowledge on the first forward pass.</p>
 
         <p><strong>The scaling factor.</strong> The output is scaled by $\alpha / r$. This hyperparameter controls the magnitude of the LoRA update relative to the pretrained weights. The paper uses $\alpha = 16$ as a default and finds that the optimal $\alpha$ is roughly proportional to $r$, so keeping $\alpha / r$ constant when varying rank often works well.</p>
 
@@ -319,12 +319,12 @@ optimizer = torch.optim.AdamW(get_lora_parameters(model), lr=1e-4)</code></pre>
 
         <h3>Full fine-tuning memory</h3>
 
-        <p>For a 7B parameter model in mixed precision (fp16 weights, fp32 optimizer states):</p>
+        <p>For a 7B parameter model in mixed precision (fp16 weights, fp32 optimiser states):</p>
 
         <ul>
           <li><strong>Weights</strong>: 7B × 2 bytes = 14 GB</li>
           <li><strong>Gradients</strong>: 7B × 2 bytes = 14 GB</li>
-          <li><strong>Optimizer (Adam)</strong>: 7B × 4 bytes × 2 = 56 GB (momentum + variance in fp32)</li>
+          <li><strong>Optimiser (Adam)</strong>: 7B × 4 bytes × 2 = 56 GB (momentum + variance in fp32)</li>
           <li><strong>Activations</strong>: ~10-20 GB (depends on batch size and sequence length)</li>
         </ul>
 
@@ -348,7 +348,7 @@ optimizer = torch.optim.AdamW(get_lora_parameters(model), lr=1e-4)</code></pre>
           <li><strong>Frozen weights</strong>: 7B × 2 bytes = 14 GB (still needed for forward pass)</li>
           <li><strong>LoRA weights</strong>: 8.4M × 2 bytes = 16.8 MB</li>
           <li><strong>LoRA gradients</strong>: 8.4M × 2 bytes = 16.8 MB</li>
-          <li><strong>Optimizer (Adam)</strong>: 8.4M × 4 bytes × 2 = 67.2 MB</li>
+          <li><strong>Optimiser (Adam)</strong>: 8.4M × 4 bytes × 2 = 67.2 MB</li>
           <li><strong>Activations</strong>: ~10-20 GB (same as before)</li>
         </ul>
 
@@ -358,10 +358,10 @@ optimizer = torch.optim.AdamW(get_lora_parameters(model), lr=1e-4)</code></pre>
 
         <ol>
           <li><strong>No gradients for frozen weights</strong>: We save 14 GB</li>
-          <li><strong>No optimizer states for frozen weights</strong>: We save 56 GB</li>
+          <li><strong>No optimiser states for frozen weights</strong>: We save 56 GB</li>
         </ol>
 
-        <p>The frozen weights still consume memory (14 GB), and activations are similar, but eliminating gradients and optimizer states for 99.9% of parameters is huge.</p>
+        <p>The frozen weights still consume memory (14 GB), and activations are similar, but eliminating gradients and optimiser states for 99.9% of parameters is huge.</p>
 
         <h3>Going even lower: QLoRA</h3>
 
@@ -369,7 +369,7 @@ optimizer = torch.optim.AdamW(get_lora_parameters(model), lr=1e-4)</code></pre>
 
         <ul>
           <li><strong>Quantized weights</strong>: 7B × 0.5 bytes = 3.5 GB</li>
-          <li><strong>LoRA weights + gradients + optimizer</strong>: ~100 MB</li>
+          <li><strong>LoRA weights + gradients + optimiser</strong>: ~100 MB</li>
           <li><strong>Activations</strong>: ~10-20 GB</li>
         </ul>
 
@@ -678,13 +678,13 @@ All tests passed!</code></pre>
 
         <h2>Final thoughts</h2>
 
-        <p>LoRA is one of my favorite ideas in the LLM era. It's simple—you can explain the core concept in one sentence—yet it solves a real problem elegantly. The math works out beautifully, the implementation is straightforward, and it actually works in practice.</p>
+        <p>LoRA is one of my favourite ideas in the LLM era. It's simple—you can explain the core concept in one sentence—yet it solves a real problem elegantly. The math works out beautifully, the implementation is straightforward, and it actually works in practice.</p>
 
         <p>What I find most impressive is the insight that weight updates have low intrinsic rank. This isn't obvious! It suggests that fine-tuning is doing something much more constrained than we might naively assume. The pretrained weights already encode most of the knowledge; adaptation is a relatively simple adjustment in a low-dimensional subspace.</p>
 
         <p>This has implications beyond just saving memory. If task adaptation really is low-rank, what does that tell us about what models are learning during fine-tuning? Are there even more efficient representations we haven't discovered yet?</p>
 
-        <p>For now, LoRA gives us a practical tool that makes fine-tuning accessible. You can adapt a 7B model on a single GPU, experiment rapidly, and ship small adapter files. That's a big deal for democratizing LLM development.</p>
+        <p>For now, LoRA gives us a practical tool that makes fine-tuning accessible. You can adapt a 7B model on a single GPU, experiment rapidly, and ship small adapter files. That's a big deal for democratising LLM development.</p>
 
         <p>The code in this post should be enough to get you started. Take a pretrained model, inject LoRA, and start training. You might be surprised how well it works.</p>
       </div>

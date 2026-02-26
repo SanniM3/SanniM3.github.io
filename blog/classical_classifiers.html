@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Classical Classifiers: A Complete Guide | Mardhiyah Sanni</title>
+  <meta name="description" content="A comprehensive deep dive into Logistic Regression, SVMs, Decision Trees, Random Forests, and K-Nearest Neighbours — with derivations, intuition, and practical guidance">
+  
+  <link rel="shortcut icon" href="../assets/images/favicon.ico" type="image/x-icon">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="../assets/css/main.css">
+  
+  <!-- Code Highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  
+  <!-- MathJax -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  
+  <!-- Theme Initialization -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>
+<body>
+  <div class="blog-wrapper">
+    <div class="reading-progress" id="reading-progress"></div>
+    
+    <nav class="blog-nav">
+      <div class="blog-nav-inner">
+        <a href="../index.html" class="blog-back-link">
+          <ion-icon name="arrow-back"></ion-icon>
+          <span>Back to Home</span>
+        </a>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+          <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </nav>
+    
+    <article class="blog-article">
+      <header class="blog-header">
+        <span class="blog-header-category">ML Fundamentals</span>
+        <h1 class="blog-header-title">Classical Classifiers: A Complete Guide</h1>
+        <p class="blog-header-subtitle">Logistic Regression, SVMs, Decision Trees, Random Forests, and KNN — from first principles</p>
+        <div class="blog-header-meta">
+          <div class="blog-header-meta-item">
+            <ion-icon name="time-outline"></ion-icon>
+            <span>50 min read</span>
+          </div>
+        </div>
+      </header>
+      
+      <div class="blog-content">
+        <h2>Five Ways to Draw a Line</h2>
+
+        <p>You have a collection of examples, each labelled with a category, and your job is to learn a rule that can assign labels to examples you've never seen. The challenge isn't just finding <em>a</em> rule that works on your training data—any sufficiently complex function can memorise a finite dataset. The challenge is finding a rule that generalises.</p>
+
+        <p>This tension between fitting the data and generalising beyond it is the central drama of machine learning. Statisticians call it the bias-variance tradeoff. A model with high bias makes strong assumptions about the world—it might insist, for example, that the decision boundary between classes must be a straight line. Such a model will never perfectly fit complex data, but it's also unlikely to be fooled by noise. A model with high variance, on the other hand, makes few assumptions and can contort itself to fit almost anything. It captures the signal, but it also captures the noise, and when you show it new data, it falls apart.</p>
+
+        <p>Every classifier navigates this tradeoff differently. Logistic regression assumes a linear boundary and estimates probabilities. Support vector machines also draw linear boundaries (at least in their basic form), but they care about geometry rather than probability—specifically, about maximising the margin between classes. Decision trees abandon linearity entirely, carving the feature space into axis-aligned rectangles through a series of yes-or-no questions. Random forests address the variance problem by training many trees and averaging their predictions. And k-nearest neighbours takes the most radical approach of all: it doesn't learn anything. It just memorises the training data and, at prediction time, asks "what did similar examples look like?"</p>
+
+        <p>These five approaches represent genuinely different philosophies about what it means to learn from data. The table below summarizes them, but the real understanding comes from working through each one in detail.</p>
+
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Model</th>
+              <th>Core Idea</th>
+              <th>Parametric?</th>
+              <th>Key Strength</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Logistic Regression</td>
+              <td>Linear model of log-odds</td>
+              <td>Yes</td>
+              <td>Probabilistic, interpretable</td>
+            </tr>
+            <tr>
+              <td>SVM</td>
+              <td>Maximum margin hyperplane</td>
+              <td>Yes (linear) / No (kernel)</td>
+              <td>Geometric robustness</td>
+            </tr>
+            <tr>
+              <td>Decision Tree</td>
+              <td>Recursive axis-aligned splits</td>
+              <td>No</td>
+              <td>Interpretability, no scaling needed</td>
+            </tr>
+            <tr>
+              <td>Random Forest</td>
+              <td>Ensemble of decorrelated trees</td>
+              <td>No</td>
+              <td>Robustness, parallelisable</td>
+            </tr>
+            <tr>
+              <td>KNN</td>
+              <td>Local majority vote</td>
+              <td>No</td>
+              <td>Simplicity, adapts to local structure</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>Let's build up the intuition for each one.</p>
+
+        <h2>Logistic Regression: Modelling Uncertainty</h2>
+
+        <p>Suppose you're a doctor trying to predict whether a patient has a disease based on a blood test result. The test gives you a number—say, the concentration of some biomarker—and you need to output a probability. Not just "sick" or "healthy," but "70% likely to be sick."</p>
+
+        <p>Your first instinct might be to fit a linear function: $p = wx + b$, where $x$ is the biomarker level and $p$ is the probability of disease. But this doesn't work. Probabilities must lie between 0 and 1, and a linear function can produce any real number. When the biomarker is very high, your model might predict $p = 1.5$. When it's very low, $p = -0.3$. Neither makes sense.</p>
+
+        <p>Logistic regression solves this problem through a clever change of variable. Instead of modelling the probability directly, we model the <strong>log-odds</strong>. The odds of an event are the ratio of the probability it happens to the probability it doesn't: $\frac{p}{1-p}$. If $p = 0.75$, the odds are $\frac{0.75}{0.25} = 3$, meaning the event is three times more likely to happen than not. Taking the logarithm gives us a quantity that ranges from $-\infty$ to $+\infty$—exactly the range of a linear function.</p>
+
+        <p>So we assume:</p>
+
+        $$\log\left(\frac{p}{1-p}\right) = \mathbf{w}^\top\mathbf{x} + b$$
+
+        <p>This is the key modelling assumption of logistic regression. Now let's solve for $p$. Exponentiating both sides:</p>
+
+        $$\frac{p}{1-p} = e^{\mathbf{w}^\top\mathbf{x} + b}$$
+
+        <p>Cross-multiplying and rearranging:</p>
+
+        $$p = (1-p) \cdot e^{\mathbf{w}^\top\mathbf{x} + b}$$
+        $$p = e^{\mathbf{w}^\top\mathbf{x} + b} - p \cdot e^{\mathbf{w}^\top\mathbf{x} + b}$$
+        $$p + p \cdot e^{\mathbf{w}^\top\mathbf{x} + b} = e^{\mathbf{w}^\top\mathbf{x} + b}$$
+        $$p(1 + e^{\mathbf{w}^\top\mathbf{x} + b}) = e^{\mathbf{w}^\top\mathbf{x} + b}$$
+
+        <p>And finally:</p>
+
+        $$p = \frac{e^{\mathbf{w}^\top\mathbf{x} + b}}{1 + e^{\mathbf{w}^\top\mathbf{x} + b}} = \frac{1}{1 + e^{-(\mathbf{w}^\top\mathbf{x} + b)}}$$
+
+        <p>This is the <strong>sigmoid function</strong>, often written as $\sigma(z) = \frac{1}{1 + e^{-z}}$. It's an S-shaped curve that smoothly maps any real number to the interval $(0, 1)$. When $z = 0$, we get $\sigma(0) = 0.5$—maximum uncertainty. As $z \to +\infty$, $\sigma(z) \to 1$. As $z \to -\infty$, $\sigma(z) \to 0$. The sigmoid isn't arbitrary; it's the unique function that emerges from assuming linear log-odds.</p>
+
+        <p>Now we need to fit the parameters $\mathbf{w}$ and $b$ to data. The standard approach is maximum likelihood: find the parameters that make the observed data most probable. For a single training example $(\mathbf{x}_i, y_i)$ where $y_i \in \{0, 1\}$, the probability of observing the label $y_i$ is:</p>
+
+        $$P(y_i | \mathbf{x}_i) = \hat{p}_i^{y_i}(1 - \hat{p}_i)^{1-y_i}$$
+
+        <p>where $\hat{p}_i = \sigma(\mathbf{w}^\top\mathbf{x}_i + b)$. This formula is compact: when $y_i = 1$, it equals $\hat{p}_i$ (we want high probability for positive examples). When $y_i = 0$, it equals $1 - \hat{p}_i$ (we want low probability for negative examples).</p>
+
+        <p>Assuming independence across examples, the likelihood of the entire dataset is the product of individual likelihoods. Taking the log (because products become sums, which are easier to optimise):</p>
+
+        $$\log \mathcal{L} = \sum_{i=1}^{n} \left[ y_i \log(\hat{p}_i) + (1 - y_i) \log(1 - \hat{p}_i) \right]$$
+
+        <p>Maximising this is equivalent to minimising its negative, which is the <strong>binary cross-entropy loss</strong>:</p>
+
+        $$J(\mathbf{w}, b) = -\frac{1}{n} \sum_{i=1}^{n} \left[ y_i \log(\hat{p}_i) + (1 - y_i) \log(1 - \hat{p}_i) \right]$$
+
+        <p>This loss function has a beautiful property: it's convex. There are no local minima to get trapped in; gradient descent will always find the global optimum. The gradients themselves have an elegant form: the derivative of the loss with respect to the weights is simply the average of (prediction error) × (input), which is the same form as linear regression. The sigmoid doesn't complicate the gradient at all.</p>
+
+        <p>Geometrically, logistic regression finds a hyperplane that separates the classes. The equation $\mathbf{w}^\top\mathbf{x} + b = 0$ defines the decision boundary—the set of points where $\hat{p} = 0.5$. On one side of this hyperplane, the model predicts class 1; on the other, class 0. The weights $\mathbf{w}$ determine the orientation of this hyperplane, and the bias $b$ shifts it.</p>
+
+        <p>This is why feature scaling matters. If one feature is measured in millions and another in fractions, the weight on the first feature will be tiny to compensate, making optimisation numerically unstable. Standardising features to zero mean and unit variance ensures all weights live on the same scale.</p>
+
+        <p>Regularisation enters naturally here. Adding an L2 penalty $\frac{\lambda}{2}\|\mathbf{w}\|^2$ to the loss shrinks the weights towards zero, preventing the model from placing too much importance on any single feature. Geometrically, this constrains the weights to lie within a ball centred at the origin. L1 regularisation $\lambda\|\mathbf{w}\|_1$ constrains them to a diamond, which has corners on the axes—this encourages some weights to be exactly zero, performing automatic feature selection.</p>
+
+        <p>Logistic regression excels when the true decision boundary is approximately linear, when interpretability matters (each coefficient tells you how much a feature affects the log-odds), and when you need calibrated probabilities. It's fast to train—$O(nd)$ per gradient descent iteration—and even faster at inference, requiring only a dot product. This makes it the workhorse of large-scale systems like ad click prediction, where billions of predictions must be made per day.</p>
+
+        <p>But logistic regression has a fundamental limitation: it can only learn linear boundaries. If the classes are separated by a curve, a circle, or any nonlinear shape, logistic regression will underfit no matter how much data you throw at it. You can engineer polynomial features to capture some nonlinearity, but this quickly becomes unwieldy in high dimensions.</p>
+
+        <p>What if we kept the linear boundary but thought about it differently? What if, instead of maximising likelihood, we focused on a geometric objective—making the boundary as robust as possible to small perturbations?</p>
+
+        <h2>Support Vector Machines: The Geometry of Confidence</h2>
+
+        <p>Imagine two classes of points that are perfectly separable by a line. In fact, infinitely many lines could separate them. Some pass close to the points; others leave more breathing room. Which line should you choose?</p>
+
+        <p>The support vector machine answers: choose the line that maximises the <strong>margin</strong>—the distance from the decision boundary to the nearest point of either class. The intuition is that a larger margin means the classifier is more "confident." If the boundary hugs the data tightly, a small perturbation—a bit of noise, a slight distribution shift—could cause misclassification. A wide margin provides a buffer.</p>
+
+        <p>Let's make this precise. A hyperplane in $\mathbb{R}^d$ is defined by $\mathbf{w}^\top\mathbf{x} + b = 0$, where $\mathbf{w}$ is the normal vector (perpendicular to the hyperplane) and $b$ is the offset. The signed distance from a point $\mathbf{x}_i$ to this hyperplane is:</p>
+
+        $$\text{distance} = \frac{\mathbf{w}^\top\mathbf{x}_i + b}{\|\mathbf{w}\|}$$
+
+        <p>For correctly classified points with labels $y_i \in \{-1, +1\}$, this distance is positive when the sign matches and negative otherwise. The margin is the minimum distance across all training points. We want to find $\mathbf{w}$ and $b$ that maximise this margin.</p>
+
+        <p>Here's a key insight. The hyperplane $\mathbf{w}^\top\mathbf{x} + b = 0$ is the same as $2\mathbf{w}^\top\mathbf{x} + 2b = 0$ or $c\mathbf{w}^\top\mathbf{x} + cb = 0$ for any constant $c$. The orientation of the hyperplane depends only on the direction of $\mathbf{w}$, not its magnitude. This freedom lets us impose a convenient normalisation: we can scale $\mathbf{w}$ and $b$ so that for the closest points to the boundary, $|{\mathbf{w}^\top\mathbf{x}_i + b}| = 1$.</p>
+
+        <p>Under this normalisation, the margin becomes $\frac{1}{\|\mathbf{w}\|}$, and maximising the margin is equivalent to minimising $\|\mathbf{w}\|$. The constraints ensure that all points are on the correct side of the boundary with at least unit functional margin: $y_i(\mathbf{w}^\top\mathbf{x}_i + b) \geq 1$ for all $i$.</p>
+
+        <p>Putting it together, the hard-margin SVM solves:</p>
+
+        $$\min_{\mathbf{w}, b} \frac{1}{2}\|\mathbf{w}\|^2 \quad \text{subject to} \quad y_i(\mathbf{w}^\top\mathbf{x}_i + b) \geq 1 \; \forall i$$
+
+        <p>The factor of $\frac{1}{2}$ is for mathematical convenience (it simplifies the gradient). The constraint says every point must be classified correctly with a functional margin of at least 1. The objective says, among all such hyperplanes, find the one with the smallest $\|\mathbf{w}\|$—equivalently, the largest geometric margin $\frac{2}{\|\mathbf{w}\|}$.</p>
+
+        <p>The points where the constraint is tight—where $y_i(\mathbf{w}^\top\mathbf{x}_i + b) = 1$—are called <strong>support vectors</strong>. They're the closest points to the boundary, and they're the only points that actually determine where the boundary lies. You could remove every other training example and the solution wouldn't change. This is both a strength (the model is determined by a small subset of the data) and a characteristic to be aware of (those few points have outsized influence).</p>
+
+        <p>Real data is rarely linearly separable. The <strong>soft-margin SVM</strong> relaxes the hard constraint by introducing slack variables $\xi_i \geq 0$ that allow some points to violate the margin:</p>
+
+        $$\min_{\mathbf{w}, b, \xi} \frac{1}{2}\|\mathbf{w}\|^2 + C \sum_{i=1}^{n} \xi_i \quad \text{subject to} \quad y_i(\mathbf{w}^\top\mathbf{x}_i + b) \geq 1 - \xi_i, \; \xi_i \geq 0$$
+
+        <p>The hyperparameter $C$ controls the tradeoff. Large $C$ means "I really don't want violations"—the model will fit the training data closely, potentially at the cost of a smaller margin. Small $C$ means "violations are okay if they buy me a wider margin"—the model will be smoother but may misclassify more training points. This is the bias-variance dial for SVMs: large $C$ increases variance, small $C$ increases bias.</p>
+
+        <p>It's illuminating to compare the SVM loss to logistic regression's. The soft-margin SVM can be reformulated as minimising:</p>
+
+        $$J = \frac{\lambda}{2}\|\mathbf{w}\|^2 + \frac{1}{n}\sum_{i=1}^{n} \max(0, 1 - y_i(\mathbf{w}^\top\mathbf{x}_i + b))$$
+
+        <p>The second term is the <strong>hinge loss</strong>. It's zero when a point is correctly classified with margin at least 1, and it grows linearly as the point moves to the wrong side. Compare this to the logistic loss $\log(1 + e^{-y_i(\mathbf{w}^\top\mathbf{x}_i + b)})$, which never reaches zero—even correctly classified points incur some loss, though it decays exponentially as they move away from the boundary.</p>
+
+        <p>This difference has practical implications. Logistic regression tries to push <em>all</em> points away from the boundary; it's always updating. The SVM, once a point is beyond the margin, ignores it completely. This makes SVMs more robust to outliers deep in the correct class but also means they extract less information from easy examples. Logistic regression gives you calibrated probabilities; SVMs give you distances to the hyperplane, which require additional calibration if you want probabilities.</p>
+
+        <p>The real power of SVMs emerges with the <strong>kernel trick</strong>. The idea is deceptively simple: what if the data isn't linearly separable in the original feature space but becomes separable if we map it to a higher-dimensional space?</p>
+
+        <p>Consider points arranged in two concentric circles. No line can separate them. But if we add a third dimension $z = x^2 + y^2$, the inner circle lifts to a different height than the outer circle, and suddenly they're separable by a plane.</p>
+
+        <p>The problem with this approach is computational. If we explicitly map every point to a high-dimensional space, the cost explodes. But here's the beautiful part: the SVM optimisation depends on the data only through dot products $\mathbf{x}_i^\top\mathbf{x}_j$. If we can compute the dot product in the high-dimensional space <em>without</em> explicitly computing the high-dimensional vectors, we get the benefits of the mapping for free.</p>
+
+        <p>A <strong>kernel function</strong> $K(\mathbf{x}_i, \mathbf{x}_j)$ computes this implicit dot product. The most popular is the RBF (Radial Basis Function) kernel:</p>
+
+        $$K(\mathbf{x}_i, \mathbf{x}_j) = \exp\left(-\gamma\|\mathbf{x}_i - \mathbf{x}_j\|^2\right)$$
+
+        <p>The RBF kernel measures similarity: it's 1 when points are identical and decays towards 0 as they move apart. The parameter $\gamma$ controls how quickly this decay happens—large $\gamma$ means only very close points are considered similar (local, complex boundaries), small $\gamma$ means distant points still influence each other (global, smooth boundaries).</p>
+
+        <p>What makes the RBF kernel remarkable is that it implicitly maps to an <em>infinite</em>-dimensional space. You can show this by expanding the exponential as a Taylor series—each term corresponds to a polynomial feature of increasing degree, and there are infinitely many of them. Yet computing the kernel requires only $O(d)$ operations.</p>
+
+        <p>The tradeoff is computational. To use kernels, you need to compute the $n \times n$ kernel matrix containing all pairwise similarities. Training becomes $O(n^2)$ to $O(n^3)$ depending on the solver, and the model must store all support vectors for prediction. For large datasets, this is prohibitive. Linear SVMs (without kernels) scale much better—$O(nd)$ training with stochastic gradient descent—but give up the ability to learn nonlinear boundaries.</p>
+
+        <p>SVMs dominated machine learning in the 2000s, winning competitions and powering applications from text classification to image recognition. They've since been largely superseded by deep learning for complex tasks and by gradient boosting for tabular data. But they remain valuable when you have a medium-sized dataset, need nonlinear boundaries, and want something more principled than a neural network.</p>
+
+        <p>Both logistic regression and SVMs draw smooth boundaries—linear or nonlinearly warped, but still smooth. What if we abandoned smoothness entirely and instead asked: "What's the simplest question I can ask to split the data?"</p>
+
+        <h2>Decision Trees: Divide and Conquer</h2>
+
+        <p>A decision tree is a game of twenty questions. Is the patient's age above 50? Yes. Is their blood pressure above 140? No. Is their cholesterol above 200? Yes. Diagnosis: moderate cardiovascular risk.</p>
+
+        <p>Each question splits the data into two groups based on a single feature and a threshold. The tree recursively partitions the feature space into axis-aligned rectangles, assigning a class label to each region. Unlike logistic regression or SVMs, there's no smooth decision surface—just hard boundaries parallel to the feature axes.</p>
+
+        <p>The algorithm builds the tree greedily, one split at a time. At each node, it considers every feature and every possible threshold, evaluates how well each split separates the classes, and chooses the best one. "Best" means different things depending on the splitting criterion, but the most common choices are information gain and Gini impurity.</p>
+
+        <p>Let's derive information gain from first principles. <strong>Entropy</strong> measures the uncertainty in a distribution. If a node contains 50% class 0 and 50% class 1, the uncertainty is maximal—you have no idea which class a random point belongs to. If a node is 100% class 1, there's no uncertainty at all. The formula is:</p>
+
+        $$H = -\sum_{k=1}^{K} p_k \log_2(p_k)$$
+
+        <p>where $p_k$ is the proportion of class $k$ in the node. For binary classification, this simplifies to $H = -p\log_2(p) - (1-p)\log_2(1-p)$, which is 0 when $p = 0$ or $p = 1$ (pure nodes) and reaches its maximum of 1 bit when $p = 0.5$.</p>
+
+        <p>A split is good if it reduces uncertainty. <strong>Information gain</strong> is the entropy of the parent minus the weighted average entropy of the children:</p>
+
+        $$\text{Gain} = H(\text{parent}) - \frac{n_L}{n}H(\text{left}) - \frac{n_R}{n}H(\text{right})$$
+
+        <p>This is exactly the mutual information between the split and the class labels. The algorithm picks the split that maximises information gain, then recurses on each child.</p>
+
+        <p><strong>Gini impurity</strong> is an alternative criterion that's faster to compute (no logarithms). For a node with class proportions $p_1, \ldots, p_K$, the Gini impurity is:</p>
+
+        $$G = 1 - \sum_{k=1}^{K} p_k^2$$
+
+        <p>This measures the probability that two randomly chosen points from the node belong to different classes. For binary classification, $G = 2p(1-p)$, which is 0 for pure nodes and 0.5 at maximum impurity. The Gini and entropy curves are nearly identical in shape, and in practice they produce very similar trees.</p>
+
+        <p>Decision trees have a remarkable property: they're invariant to feature scaling. Whether a feature is measured in millimeters or kilometers, the tree only cares about the ordering of values, not their magnitude. This is because each split is just a threshold comparison: "Is $x_j \leq t$?" The actual value of $t$ adjusts to the scale, but the split is the same.</p>
+
+        <p>This invariance is convenient, but it comes with a cost. Decision trees are high-variance learners. Small changes in the data can produce completely different trees. A few points near a split boundary can flip the entire structure of the tree, cascading changes through all child nodes.</p>
+
+        <p>Deep trees are particularly prone to overfitting. If you let a tree grow until every leaf is pure, it will memorise the training data perfectly—and perform terribly on new data. Each leaf might contain just one or two examples, and the tree has learned nothing generalisable.</p>
+
+        <p>The standard remedies are pruning and early stopping. Limiting the maximum depth prevents the tree from becoming too complex. Requiring a minimum number of samples to split a node stops it from making decisions based on tiny subsets. Cost-complexity pruning grows the full tree and then removes branches that don't improve cross-validation performance.</p>
+
+        <p>Single decision trees are most valuable when interpretability is paramount. A doctor can look at a shallow tree and understand exactly why the model made its prediction. Regulations in healthcare and finance often require this kind of explainability. For pure predictive accuracy, though, single trees are rarely competitive with other methods.</p>
+
+        <p>But what if we could combine many trees, each making different mistakes, and average out their errors?</p>
+
+        <h2>Random Forests: Wisdom of the Crowd</h2>
+
+        <p>The random forest is based on a simple observation: if you train many models and average their predictions, the variance of the ensemble is lower than the variance of any individual model. The errors cancel out—at least partially.</p>
+
+        <p>For this to work, the models need to make <em>different</em> errors. If all trees are identical, averaging them achieves nothing. The random forest ensures diversity through two mechanisms: bootstrap sampling and feature subsampling.</p>
+
+        <p><strong>Bootstrap sampling</strong> means each tree is trained on a random sample of the data, drawn with replacement. If you have $n$ training examples and you draw $n$ samples with replacement, some examples will appear multiple times and others won't appear at all. What fraction of examples are included?</p>
+
+        <p>The probability that a specific example is <em>not</em> drawn in a single draw is $\frac{n-1}{n}$. The probability it's not drawn in any of $n$ draws is $\left(\frac{n-1}{n}\right)^n$. As $n$ grows large, this approaches $\frac{1}{e} \approx 0.368$. So about 36.8% of examples are left out of each bootstrap sample, and about 63.2% are included. Each tree sees a different 63% of the data.</p>
+
+        <p><strong>Feature subsampling</strong> adds another layer of randomness. At each split, the tree only considers a random subset of features—typically $\sqrt{d}$ for classification or $\frac{d}{3}$ for regression. This prevents all trees from splitting on the same dominant feature. Even if one feature is highly predictive, different trees will be forced to find alternative structure in the data.</p>
+
+        <p>Why does averaging work? Consider an ensemble of $k$ models, each with variance $\sigma^2$ and pairwise correlation $\rho$. The variance of the ensemble average is:</p>
+
+        $$\text{Var}(\bar{f}) = \rho\sigma^2 + \frac{1-\rho}{k}\sigma^2$$
+
+        <p>The first term represents the irreducible variance from correlation—no amount of averaging can eliminate it. The second term shrinks with $k$: if the trees are uncorrelated ($\rho = 0$), the ensemble variance decreases like $\frac{\sigma^2}{k}$. Bootstrap sampling and feature subsampling reduce $\rho$ by making the trees disagree.</p>
+
+        <p>The bias of the ensemble is roughly equal to the bias of individual trees—averaging doesn't reduce bias. But decision trees have low bias (they can fit complex functions), so this isn't a problem. The random forest trades the high variance of individual trees for the low variance of the ensemble while keeping the low bias.</p>
+
+        <p>The hyperparameters are intuitive. More trees almost always help, with diminishing returns after a few hundred. The <code>max_features</code> parameter controls the correlation-variance tradeoff: smaller values mean more diversity but potentially worse individual trees. The depth controls bias: deeper trees fit more complex functions but can overfit, though this is less severe in forests than in single trees.</p>
+
+        <p>Random forests are remarkably robust. They handle missing values gracefully, they're not sensitive to feature scaling, and they rarely overfit catastrophically. Training is embarrassingly parallel—each tree is independent, so you can grow them on separate CPU cores. These properties made random forests the default choice for tabular data for many years.</p>
+
+        <p>The main disadvantages are interpretability (hundreds of trees are hard to understand) and model size (you must store all trees). For very large datasets, gradient-boosted trees often achieve better accuracy, though they're more sensitive to hyperparameters and easier to overfit.</p>
+
+        <p>All the methods we've discussed so far learn a model from the training data—a function that can be evaluated without reference to the original examples. But there's a more radical approach: what if we didn't learn anything at all?</p>
+
+        <h2>K-Nearest Neighbours: No Model, Just Memory</h2>
+
+        <p>K-nearest neighbours is the simplest algorithm that could possibly work. To classify a new point, find the $k$ training examples closest to it and let them vote. The majority class wins.</p>
+
+        <p>There's no training phase—"fitting" the model just means storing the training data. All the computation happens at prediction time, when you must compare the query point to every stored example. This makes KNN a <strong>lazy learner</strong> or <strong>instance-based learner</strong>: it defers all work until the last possible moment.</p>
+
+        <p>The key question is: what does "closest" mean? The choice of distance metric shapes everything.</p>
+
+        <p><strong>Euclidean distance</strong> (L2) is the straight-line distance: $d(\mathbf{x}, \mathbf{y}) = \sqrt{\sum_i (x_i - y_i)^2}$. It treats all directions equally and penalizes large differences in any dimension.</p>
+
+        <p><strong>Manhattan distance</strong> (L1) measures the sum of absolute differences: $d(\mathbf{x}, \mathbf{y}) = \sum_i |x_i - y_i|$. It's the distance you'd walk in a city with a grid street layout. In high dimensions, L1 can be more robust than L2 because it doesn't square the differences.</p>
+
+        <p><strong>Cosine distance</strong> measures the angle between vectors: $d(\mathbf{x}, \mathbf{y}) = 1 - \frac{\mathbf{x} \cdot \mathbf{y}}{\|\mathbf{x}\|\|\mathbf{y}\|}$. It ignores magnitude and cares only about direction. This is useful for text data, where documents of different lengths should be comparable.</p>
+
+        <p>Feature scaling is critical for KNN. If one feature ranges from 0 to 1 and another from 0 to 1,000,000, the second feature will dominate the distance calculation, and the first will be effectively ignored. Standardising features to zero mean and unit variance puts them on equal footing.</p>
+
+        <p>The hyperparameter $k$ controls the bias-variance tradeoff. With $k = 1$, each prediction is determined by a single neighbour. The decision boundary is maximally complex—it can wrap around every individual training point—but it's also maximally sensitive to noise. One mislabelled point creates a wrong prediction in its vicinity.</p>
+
+        <p>As $k$ increases, the boundary smooths out. With $k = n$ (all training points vote), the prediction is always the majority class in the dataset—high bias, zero variance, completely useless. The sweet spot is somewhere in between, typically found through cross-validation.</p>
+
+        <p>Distance-weighted voting can help: instead of equal votes, weight each neighbour by the inverse of its distance. Closer neighbours have more influence. This softens the effect of the arbitrary threshold separating the $k$th neighbour from the $(k+1)$th.</p>
+
+        <p>KNN has a fundamental problem in high dimensions, colourfully named the <strong>curse of dimensionality</strong>. The intuition is that as the number of dimensions grows, the concept of "nearest neighbour" breaks down.</p>
+
+        <p>Consider the volume of a hypersphere. In $d$ dimensions, the volume of a sphere of radius $r$ is proportional to $r^d$. Now consider what fraction of a unit hypercube lies within a hypersphere inscribed inside it. As $d$ increases, this fraction shrinks exponentially—most of the volume of a high-dimensional cube is in its corners, far from the centre.</p>
+
+        <p>The practical consequence is that distances become meaningless. If you uniformly sample points in a high-dimensional space, the distance from any point to its nearest neighbour approaches the distance to its farthest neighbour. The nearest neighbour isn't much closer than a random point. When neighbours aren't meaningfully "near," KNN fails.</p>
+
+        <p>The rule of thumb is that KNN works well up to around 20 dimensions. Beyond that, you need dimensionality reduction (PCA, UMAP) or a different algorithm. For very high-dimensional data like images or text, KNN on raw features is almost never competitive.</p>
+
+        <p>The computational cost of KNN is also unusual. Training is $O(1)$—just store the data. But prediction is $O(nd)$: for each query, you must compute the distance to all $n$ training points. For large datasets, this is prohibitive. Data structures like KD-trees and ball trees can accelerate nearest neighbour search to $O(\log n)$ in low dimensions, but they suffer the same curse of dimensionality and degrade to $O(n)$ in high dimensions.</p>
+
+        <p>For truly large-scale nearest neighbour search, approximate methods are necessary. Libraries like FAISS and Annoy build specialised indexes that find near-neighbours in sublinear time, accepting a small accuracy loss for massive speedups.</p>
+
+        <p>Despite its limitations, KNN has a unique strength: it adapts perfectly to local structure. If the decision boundary is complex and irregular, KNN will trace it exactly. There's no parametric form constraining the shape. This makes KNN useful for anomaly detection, data imputation, and as a baseline to sanity-check other models.</p>
+
+        <h2>Choosing Your Weapon</h2>
+
+        <p>With five classifiers to choose from, how do you decide which to use?</p>
+
+        <p>Start by asking: is the decision boundary likely to be linear? If your features are well-engineered and the classes are separable by a hyperplane, logistic regression is hard to beat. It's fast, interpretable, produces calibrated probabilities, and scales to enormous datasets. In high-dimensional sparse settings like text classification, linear models dominate.</p>
+
+        <p>If you need nonlinear boundaries but want something principled, SVMs with RBF kernels are worth considering—for medium-sized datasets. The kernel trick gives you expressive power without explicit feature engineering. But if your dataset has more than a few tens of thousands of examples, the $O(n^2)$ kernel matrix becomes impractical. At that scale, switch to linear SVMs or neural networks.</p>
+
+        <p>For tabular data with mixed feature types, tree-based methods are usually the best starting point. Random forests are robust, hard to overfit, and require minimal tuning. They handle categorical features, missing values, and unscaled inputs without complaint. If you need more accuracy and are willing to tune hyperparameters, gradient-boosted trees (XGBoost, LightGBM) typically outperform random forests, though they're more prone to overfitting.</p>
+
+        <p>When interpretability is required—not just desired, but legally or ethically mandated—single decision trees may be your only option. A shallow tree can be visualised and explained to non-experts. Logistic regression coefficients are also interpretable, though they describe relationships in log-odds, which is less intuitive.</p>
+
+        <p>KNN is rarely the best choice for pure prediction, but it has its uses. For datasets too small to train a robust model, KNN can work when others fail. For applications where new classes appear over time and the model must adapt without retraining, KNN's non-parametric nature is an advantage. And for understanding local structure in data—which examples are similar to this one?—KNN is exactly the right tool.</p>
+
+        <p>The following table summarizes the key properties:</p>
+
+        <table class="comparison-table wide">
+          <thead>
+            <tr>
+              <th>Property</th>
+              <th>Logistic Regression</th>
+              <th>SVM</th>
+              <th>Decision Tree</th>
+              <th>Random Forest</th>
+              <th>KNN</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Boundary Type</td>
+              <td>Linear</td>
+              <td>Linear / Nonlinear</td>
+              <td>Axis-aligned</td>
+              <td>Axis-aligned</td>
+              <td>Arbitrary</td>
+            </tr>
+            <tr>
+              <td>Training Cost</td>
+              <td>$O(nd)$ per iteration</td>
+              <td>$O(n^2)$ to $O(n^3)$</td>
+              <td>$O(nd \log n)$</td>
+              <td>$O(knd \log n)$</td>
+              <td>$O(1)$</td>
+            </tr>
+            <tr>
+              <td>Prediction Cost</td>
+              <td>$O(d)$</td>
+              <td>$O(n_{sv} \cdot d)$</td>
+              <td>$O(\text{depth})$</td>
+              <td>$O(k \cdot \text{depth})$</td>
+              <td>$O(nd)$</td>
+            </tr>
+            <tr>
+              <td>Memory</td>
+              <td>$O(d)$</td>
+              <td>$O(n_{sv} \cdot d)$</td>
+              <td>$O(\text{nodes})$</td>
+              <td>$O(k \cdot \text{nodes})$</td>
+              <td>$O(nd)$</td>
+            </tr>
+            <tr>
+              <td>Scaling Needed</td>
+              <td>Yes</td>
+              <td>Yes</td>
+              <td>No</td>
+              <td>No</td>
+              <td>Yes</td>
+            </tr>
+            <tr>
+              <td>Interpretable</td>
+              <td>High</td>
+              <td>Low</td>
+              <td>Very high</td>
+              <td>Medium</td>
+              <td>Medium</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>In practice, my workflow is straightforward. For any new classification problem, I start with logistic regression as a baseline. If it works well enough, I stop—simplicity has value. If not, I try a random forest or gradient-boosted trees. I reach for SVMs only when I have a medium-sized dataset and good reason to believe a kernel will help. I use KNN mainly for debugging and understanding, not production.</p>
+
+        <p>The most important advice is to understand your data before choosing a model. Look at the features. Visualise the class distributions. Think about what kind of boundary makes sense. The best algorithm is the one that matches the structure of your problem.</p>
+
+        <p>These five classifiers have been around for decades. They've been extensively studied, efficiently implemented, and battle-tested on real problems. In an era of increasingly complex models, there's something refreshing about understanding the relatively simpler models.</p>
+      </div>
+      
+      <footer class="blog-footer">
+        <a href="../index.html#blog" class="back-to-blog">
+          <ion-icon name="arrow-back"></ion-icon>
+          Back to all posts
+        </a>
+      </footer>
+    </article>
+    
+    <footer class="site-footer">
+      <div class="site-footer-content">
+        <p class="copyright">© 2026 Mardhiyah Sanni</p>
+        <p class="ai-disclosure">Some content created in collaboration with generative AI.</p>
+      </div>
+    </footer>
+  </div>
+  
+  <!-- Scripts -->
+  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+  
+  <script>
+    // Initialize syntax highlighting
+    hljs.highlightAll();
+    
+    // Reading progress bar
+    window.addEventListener('scroll', () => {
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const scrolled = (window.scrollY / docHeight) * 100;
+      document.getElementById('reading-progress').style.width = scrolled + '%';
+    });
+    
+    // Theme toggle
+    function toggleTheme() {
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    }
+    
+    // Copy code button
+    function copyCode(button) {
+      const codeBlock = button.closest('.code-block').querySelector('code');
+      navigator.clipboard.writeText(codeBlock.textContent);
+      button.textContent = 'Copied!';
+      setTimeout(() => button.textContent = 'Copy', 2000);
+    }
+  </script>
+</body>
+</html>

@@ -130,7 +130,7 @@ print(f"{flops/1e12:.2f} TFLOPs")</code></pre>
           <li>Read Q and K from HBM.</li>
           <li>Compute $QK^T$ and write the full matrix to HBM.</li>
           <li>Read the full matrix back from HBM for softmax.</li>
-          <li>Write the normalized attention weights to HBM.</li>
+          <li>Write the normalised attention weights to HBM.</li>
           <li>Read those weights again to multiply them by V.</li>
           <li>Write the final output.</li>
         </ol>
@@ -185,7 +185,7 @@ print(f"{flops/1e12:.2f} TFLOPs")</code></pre>
 
         <p>And this must be computed for every head in every layer. No GPU can sustainably handle this load.</p>
 
-        <p>This is where FlashAttention enters the story. FlashAttention avoids ever materializing the full attention matrix. Instead, it splits the computation into small tiles that fit entirely in fast on-chip memory, streams through the sequence in a single pass, and performs softmax in a numerically stable way without needing the full matrix.</p>
+        <p>This is where FlashAttention enters the story. FlashAttention avoids ever materialising the full attention matrix. Instead, it splits the computation into small tiles that fit entirely in fast on-chip memory, streams through the sequence in a single pass, and performs softmax in a numerically stable way without needing the full matrix.</p>
 
         <p>It does the same math, but it does it in a way the hardware likes.</p>
 
