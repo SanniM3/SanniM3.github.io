@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Building a Multi-Agent Academic Research Assistant: A Deep Dive | Mardhiyah Sanni</title>
+  <meta name="description" content="How we designed a system that thinks like a research team — and what broke along the way">
+  
+  <link rel="shortcut icon" href="../assets/images/favicon.ico" type="image/x-icon">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="../assets/css/main.css">
+  
+  <!-- Theme Initialization -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>
+<body>
+  <div class="blog-wrapper">
+    <div class="reading-progress" id="reading-progress"></div>
+    
+    <nav class="blog-nav">
+      <div class="blog-nav-inner">
+        <a href="../index.html" class="blog-back-link">
+          <ion-icon name="arrow-back"></ion-icon>
+          <span>Back to Home</span>
+        </a>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+          <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </nav>
+    
+    <article class="blog-article">
+      <header class="blog-header">
+        <span class="blog-header-category">Applications</span>
+        <h1 class="blog-header-title">Building a Multi-Agent Academic Research Assistant: A Deep Dive</h1>
+        <p class="blog-header-subtitle"><em>How we designed a system that thinks like a research team &mdash; and what broke along the way</em></p>
+        <div class="blog-header-meta">
+          <div class="blog-header-meta-item">
+            <ion-icon name="time-outline"></ion-icon>
+            <span>25 min read</span>
+          </div>
+        </div>
+      </header>
+      
+      <figure class="blog-banner">
+        <img src="../assets/images/research_assistant.png" alt="Multi-Agent Research Assistant" loading="lazy">
+      </figure>
+      
+      <div class="blog-content">
+
+        <h2>The Problem with "Just Ask the AI"</h2>
+
+        <p>If you've ever tried to use ChatGPT or Claude to write a literature review, you've probably experienced the frustration. The AI confidently produces what looks like an academic paper, complete with citations to papers that <em>sound</em> real &mdash; "Smith et al. (2023) demonstrated that..." &mdash; except those papers don't exist. The AI hallucinated them.</p>
+
+        <p>This isn't a bug in the model; it's a fundamental mismatch between what language models do (predict plausible text) and what academic research requires (grounded, verifiable claims traced to real sources). No amount of prompting can fully solve this. You need a different architecture entirely.</p>
+
+        <p>This article walks through how we designed a multi-agent system that approaches academic research the way a human research team would: iteratively searching, reading, extracting knowledge, synthesising findings, and &mdash; critically &mdash; ensuring every claim can be traced back to its source. We'll also walk through the real failures we encountered and how we fixed them, because the debugging story is as instructive as the design.</p>
+
+        <h2>The Vision: Mimicking How Humans Do Research</h2>
+
+        <p>Before diving into code, let's think about how an experienced researcher actually conducts a literature review:</p>
+
+        <ol>
+          <li><strong>Scoping</strong>: They start by defining what they're looking for. What's the research question? What's in scope, what's out?</li>
+          <li><strong>Search</strong>: They query databases &mdash; Google Scholar, arXiv, ACL Anthology &mdash; with targeted keywords. They don't search once; they search iteratively, refining queries based on what they find.</li>
+          <li><strong>Triage</strong>: They skim abstracts. Most papers get discarded. A smaller set gets flagged for deeper reading.</li>
+          <li><strong>Deep Reading</strong>: For selected papers, they read carefully, taking notes. They extract key claims, methods, results, and limitations.</li>
+          <li><strong>Synthesis</strong>: They organise findings into themes. They notice patterns, contradictions, and gaps.</li>
+          <li><strong>Writing</strong>: They draft sections, always citing sources. They don't make claims they can't back up. Real survey sections are <em>dense</em> &mdash; nearly every sentence has a citation.</li>
+          <li><strong>Revision</strong>: They re-read their draft critically. Where is the coverage thin? What's missing? Is the writing shallow? They go back to search for more, or rewrite sections that don't meet the standard.</li>
+        </ol>
+
+        <p>This process is <em>iterative</em>. A researcher doesn't do each step once in sequence; they loop back constantly. Our system needed to capture this &mdash; including the part where you re-read your own draft and decide it isn't good enough.</p>
+
+        <h2>Why Multi-Agent? The Case for Specialisation</h2>
+
+        <p>A single monolithic prompt trying to do all of this would be a disaster. It would be too long, too unfocused, and impossible to debug. Instead, we decomposed the problem into specialised agents, each with a clear responsibility:</p>
+
+        <ul>
+          <li><strong>Orchestrator</strong>: Validates the topic, gets things started</li>
+          <li><strong>Planner</strong>: Defines the research scope, generates questions, creates a preliminary outline</li>
+          <li><strong>Search Planner</strong>: Generates targeted arXiv and web queries</li>
+          <li><strong>Retriever</strong>: Executes searches and handles deduplication</li>
+          <li><strong>Triage</strong>: Screens papers by relevance</li>
+          <li><strong>Ingestion</strong>: Fetches full text and chunks it</li>
+          <li><strong>Extractor</strong>: Mines structured claims, entities, and relations</li>
+          <li><strong>KB Curator</strong>: Merges duplicate entities, maintains knowledge graph integrity</li>
+          <li><strong>Gap Scorer</strong>: Evaluates coverage and decides whether to keep researching</li>
+          <li><strong>Outline Refiner</strong>: Reshapes the outline based on what was actually found</li>
+          <li><strong>Synthesiser</strong>: Writes sections from the evidence, then runs a coherence pass</li>
+          <li><strong>Verifier</strong>: Ensures every claim is grounded</li>
+          <li><strong>Citation Manager</strong>: Converts internal citations to IEEE format</li>
+          <li><strong>Reviewer</strong>: Critiques the draft like a peer reviewer &mdash; and can send it back for rewriting</li>
+        </ul>
+
+        <p>Each agent has its own system prompt optimised for its specific task. The Extractor doesn't need to know how to write prose; the Synthesiser doesn't need to know how to parse PDFs. This separation of concerns makes the system more reliable and, critically, easier to debug when things go wrong.</p>
+
+        <h2>The Backbone: LangGraph and State Management</h2>
+
+        <p>We built this on <a href="https://github.com/langchain-ai/langgraph" target="_blank" rel="noopener">LangGraph</a>, LangChain's framework for building stateful, multi-step agent workflows. LangGraph gives us two critical capabilities:</p>
+
+        <ol>
+          <li><strong>Explicit state</strong>: Instead of passing context through message history (which gets unwieldy fast), we define a structured <code>ResearchState</code> object that flows through every node. Each agent reads from the state and returns a partial update &mdash; only the fields it changed.</li>
+          <li><strong>Conditional routing</strong>: The workflow isn't linear. After gap scoring, we might loop back to search for more papers, or proceed to synthesis. After review, we might rewrite sections, do more research, or finalise. LangGraph's conditional edges make this natural.</li>
+        </ol>
+
+        <p>Here's the actual flow:</p>
+
+<pre><code>START → Orchestrator → Planner
+                         ↓
+              ┌──── RESEARCH LOOP ────────────────────────┐
+              │                                           │
+              │  Search Planner → Retriever → Triage      │
+              │       ↑                        ↓          │
+              │       │                   Ingestion       │
+              │       │                        ↓          │
+              │  (if gaps remain)         Extractor       │
+              │       │                        ↓          │
+              │       └─────────────── Gap Scorer         │
+              └───────────────────────────────────────────┘
+                         ↓ (research complete)
+              Outline Refiner → Synthesiser → Verifier
+                    ↑                ↑              ↓
+                    │                │      Citation Manager
+                    │                │              ↓
+                    │         (rewrite if    Reviewer ──→ Finaliser → END
+                    │          writing poor)    │
+                    └──────────────────────────┘
+                      (if research gaps found)</code></pre>
+
+        <p>There are <strong>three conditional routing points</strong> in this graph, and each represents a genuine decision:</p>
+
+        <ol>
+          <li><strong>After Gap Scorer</strong>: Has the research met the acceptance criteria? If not, loop back for more papers. If yes, exit to outline refinement.</li>
+          <li>
+            <strong>After Reviewer</strong>: Is the draft good enough? The reviewer classifies blocking issues into two categories:
+            <ul>
+              <li><strong>Research gaps</strong> (missing seminal papers, thin coverage) → route back to the Search Planner for more research</li>
+              <li><strong>Writing quality issues</strong> (unsupported claims, structural problems) → route back to the Synthesiser for rewriting</li>
+              <li><strong>No blockers</strong> → proceed to the Finaliser</li>
+            </ul>
+          </li>
+        </ol>
+
+        <p>This three-way reviewer decision was a later addition &mdash; and an important one. The original design could only loop back for more research or finalise, which meant shallow writing could never be corrected. More on this in the debugging section.</p>
+
+        <h2>Data Modelling: The Foundation Nobody Talks About</h2>
+
+        <p>Before writing any agent logic, we needed to think carefully about data. What exactly are we tracking? How do we maintain provenance?</p>
+
+        <h3>The Paper Record</h3>
+
+        <p>Every academic paper we encounter gets a <code>Paper</code> object:</p>
+
+<pre><code class="language-python">class Paper(BaseModel):
+    paper_id: str          # Stable ID: "arxiv:1706.03762" or "doi:10.xxx" or "title:{hash}"
+    title: str
+    authors: List[str]
+    year: Optional[int]
+    venue: Optional[str]
+    arxiv_id: Optional[str]
+    doi: Optional[str]
+    abstract: Optional[str]
+    is_ingested: bool
+    ingestion_status: str  # "pending", "complete", "failed", "error"
+    metadata: PaperMetadata</code></pre>
+
+        <p>The <code>paper_id</code> is crucial. We generate it deterministically from DOI or arXiv ID when available, falling back to a hash of the title. This ensures that the same paper always gets the same ID, even if we encounter it through different searches.</p>
+
+        <p>One important design choice: we intentionally do <strong>not</strong> store <code>full_text</code> on the Paper object. Early versions did this, and it caused severe state bloat (more on this later). The full text is chunked during ingestion, and only the chunks persist in the state.</p>
+
+        <h3>Chunks: The Grounding Units</h3>
+
+        <p>When we ingest a paper, we don't store it as one big blob. We chunk it into smaller pieces &mdash; roughly paragraph-sized &mdash; that become our retrieval and evidence units:</p>
+
+<pre><code class="language-python">class Chunk(BaseModel):
+    chunk_id: str          # Deterministic hash-based ID
+    paper_id: str          # Link to parent paper
+    text: str              # The actual content
+    section_path: str      # e.g., "Methods > Data Collection"
+    source_type: SourceType  # PDF, arXiv HTML, web</code></pre>
+
+        <p>Every chunk has a stable <code>chunk_id</code> derived from its content. When we later cite evidence, we cite specific chunks. If someone wants to verify a claim, they can trace it back to the exact paragraph it came from.</p>
+
+        <h3>The Claim Bank: Structured Knowledge</h3>
+
+        <p>Here's where things get interesting. Most RAG systems stop at chunks &mdash; they retrieve relevant text and let the LLM synthesise it. We go further by extracting <em>structured claims</em>:</p>
+
+<pre><code class="language-python">class Claim(BaseModel):
+    claim_id: str
+    claim_type: ClaimType   # DEFINITION, METHOD_SUMMARY, EMPIRICAL_RESULT, COMPARISON, LIMITATION, OPEN_PROBLEM
+    text: str               # The claim in natural language
+    evidence: List[Evidence]  # Pointers to supporting chunks
+    paper_id: str           # Source paper
+    entity_ids: List[str]   # Entities mentioned (methods, datasets)
+    confidence: ConfidenceLevel</code></pre>
+
+        <p>A claim might be: "BERT achieves 93.2% accuracy on SQuAD 2.0." This is linked to the chunk where we found it, the paper it came from, and the entities involved (BERT, SQuAD 2.0). Claims are typed &mdash; an <code>EMPIRICAL_RESULT</code> is different from a <code>DEFINITION</code> or a <code>LIMITATION</code> &mdash; which matters when routing them to the right survey section.</p>
+
+        <p>Why bother with this structure? Because when the Synthesiser writes the survey, it doesn't just retrieve chunks and hope for the best. It queries the Claim Bank with specific filters: "Give me all <code>COMPARISON</code> and <code>EMPIRICAL_RESULT</code> claims relevant to this section." It gets structured data it can reason about, not just text blobs.</p>
+
+        <h3>Entities, Relations, and the Knowledge Graph</h3>
+
+        <p>We also extract a lightweight knowledge graph:</p>
+
+<pre><code class="language-python">class Entity(BaseModel):
+    entity_id: str
+    entity_type: EntityType  # METHOD, DATASET, METRIC, TASK, MODEL, BENCHMARK
+    name: str
+    aliases: List[str]       # "BERT", "bert-base", "Bidirectional Encoder..."
+
+class Relation(BaseModel):
+    subject_entity_id: str
+    predicate: RelationType  # evaluated_on, improves_over, uses, extends
+    object_entity_id: str</code></pre>
+
+        <p>The KB Curator agent deduplicates entities using fuzzy name matching (0.85 threshold via <code>SequenceMatcher</code>) and resolves relation references. This means that "BERT", "bert-base-uncased", and "Bidirectional Encoder Representations from Transformers" all collapse to a single entity &mdash; which matters for accurate coverage scoring and for the synthesiser's claim-to-section matching.</p>
+
+        <h2>The Agents: A Closer Look</h2>
+
+        <p>Let's walk through some of the more interesting agents and the design choices behind them.</p>
+
+        <h3>The Triage Agent: Fail-Open by Design</h3>
+
+        <p>After the Retriever returns candidate papers, the Triage agent decides which ones deserve full-text ingestion. It receives titles and abstracts in batches of 10 and outputs structured decisions:</p>
+
+<pre><code class="language-json">{
+  "decisions": [
+    {
+      "paper_id": "arxiv:2301.12345",
+      "decision": "INGEST",
+      "rationale": "Directly addresses transformer efficiency, highly relevant",
+      "relevance_score": 0.9,
+      "tags": { "method_type": "efficient_attention", "is_seminal": false }
+    }
+  ]
+}</code></pre>
+
+        <p>The most important design decision here is what happens when parsing fails. Our original implementation silently <em>skipped</em> unparseable batches, which led to a catastrophic bug where the system produced reports with zero papers (see "The Debugging Story" below). The current design <strong>fails open</strong>: if the LLM's JSON can't be parsed, <em>all papers in the batch are accepted</em> for ingestion. The rationale: ingesting a few extra marginally-relevant papers is infinitely better than ingesting none.</p>
+
+        <p>After screening, the Triage agent also <strong>prunes the candidate list</strong>, removing rejected papers from the state. This is a state size optimisation &mdash; rejected papers are dead weight that would otherwise be serialised on every node transition.</p>
+
+        <h3>The Extractor: Mining Structured Knowledge</h3>
+
+        <p>The Extractor reads chunks and produces claims, entities, and relations. One subtle design choice: extraction is tracked at the <strong>chunk level</strong>, not the paper level. If a paper has 20 chunks and extraction fails after processing 15, those 15 chunks' claims are preserved, and the remaining 5 will be retried in the next iteration.</p>
+
+        <p>The extraction prompt is carefully designed to produce typed claims with evidence pointers:</p>
+
+        <blockquote>
+          <p>"Extract structured knowledge from this academic paper content... Only extract claims that are explicitly stated in the text. Always link claims to supporting chunk IDs. Be conservative &mdash; only high-confidence extractions."</p>
+        </blockquote>
+
+        <p>If parsing fails, we gracefully degrade: no claims rather than hallucinated ones. The system would rather have gaps (which the Gap Scorer will detect and try to fill) than false data.</p>
+
+        <h3>The Synthesiser: Writing Like a Survey, Not a Blog Post</h3>
+
+        <p>The Synthesiser is the most complex agent and the one that went through the most revision. Getting it right required solving two problems: <em>which evidence to show</em> and <em>how to prompt for survey-quality prose</em>.</p>
+
+        <p><strong>Problem 1: Claim-to-section matching.</strong> The original implementation used a hardcoded keyword map &mdash; if the section title contained "methods", show <code>METHOD_SUMMARY</code> claims. This fell apart for sections with titles like "Evolution of Transformer Architectures" or "Comparative Analysis", which didn't match any keyword. Every section got the same undifferentiated pool of claims, and the LLM kept citing the same handful of papers.</p>
+
+        <p>The current implementation uses a <strong>scored multi-signal matching system</strong>:</p>
+
+        <ol>
+          <li><strong>Claim type matching</strong> from an expanded keyword map (covering "evolution", "compar", "challenge", "application", etc.)</li>
+          <li><strong>Keyword overlap</strong> between the section's title, description, and required elements against claim text</li>
+          <li><strong>Entity-name matching</strong> &mdash; if an entity's name appears in the section description, claims mentioning that entity get a strong relevance boost</li>
+        </ol>
+
+        <p>To prevent any single paper from dominating a section, we cap claims at <strong>8 per source paper</strong>. This forces the LLM to draw from diverse sources.</p>
+
+        <p><strong>Problem 2: Survey-quality writing.</strong> Early prompts told the LLM to be "comprehensive but concise" &mdash; a contradiction for a survey paper, where comprehensiveness <em>is</em> the point. The current prompt explicitly demands:</p>
+
+        <ul>
+          <li><strong>800&ndash;2000 words</strong> per section</li>
+          <li><strong>Citations in nearly every sentence</strong> (at least 1 per 2 sentences on average)</li>
+          <li><strong>Subsection structure</strong> with <code>###</code> headings</li>
+          <li><strong>Specific numbers</strong>: accuracy figures, model sizes, speedup ratios</li>
+          <li><strong>Compare and contrast</strong>, don't just list</li>
+          <li><strong>Cross-references</strong> to other sections of the survey</li>
+        </ul>
+
+        <p>The synthesiser also runs a <strong>coherence pass</strong> after all sections are written individually. It sends the full compiled draft to the LLM and asks for transition paragraphs &mdash; short bridging text prepended or appended to each section so the survey reads as a unified narrative, not a collection of independent essays.</p>
+
+        <h3>The Reviewer: Three Possible Verdicts</h3>
+
+        <p>The Reviewer is an ARR-style (ACL Rolling Review) quality gate that evaluates the draft on soundness, contribution, clarity, and coverage. What makes it interesting is its <em>routing decision</em>.</p>
+
+        <p>The original reviewer could only do two things: finalise or request more research. This meant that if the research was adequate but the writing was shallow, the system would either accept mediocre prose or needlessly search for more papers.</p>
+
+        <p>The current reviewer classifies blocking issues into <strong>research gaps</strong> versus <strong>writing quality problems</strong>:</p>
+
+<pre><code class="language-python">research_categories = {MISSING_SEMINAL, MISSING_RECENT, BENCHMARK_GAP, TAXONOMY_GAP, THIN_COVERAGE}
+writing_categories = {STRUCTURAL, UNSUPPORTED_CLAIM, MISSING_CITATION, WEAK_EVIDENCE}
+
+if open_research:   phase = "revision"      # → back to Search Planner
+elif open_writing:  phase = "resynthesize"  # → back to Synthesiser
+else:               phase = "finalize"      # → Finaliser</code></pre>
+
+        <p>This three-way routing means the system can do targeted remediation: more research when it's needed, rewriting when the evidence is there but the prose is inadequate, and finalisation when both are satisfactory.</p>
+
+        <h2>The Iteration Loop: Where the Magic Happens</h2>
+
+        <p>The real power of the system is in its iteration loop. The Gap Scorer computes both <strong>coverage metrics</strong> and <strong>ARR-style review scores</strong>, then makes the continue/stop decision:</p>
+
+<pre><code class="language-python">def should_continue_research(state, coverage, review_scores, questions):
+    # Unanswered research questions?
+    if answered_ratio &lt; criteria.min_answered_questions_ratio: return True
+    # Too many open follow-ups?
+    if open_follow_ups &gt; criteria.max_open_follow_ups: return True
+    # ARR scores below threshold?
+    if review_scores.coverage &lt; criteria.min_coverage: return True
+    # Not enough papers?
+    if len(state.papers_ingested) &lt; criteria.min_papers: return True
+    # Blocking issues?
+    if blockers: return True
+    return False</code></pre>
+
+        <p>This is a deliberate departure from simple threshold checking ("do we have 10 papers yet?"). The system continues until <strong>research questions are sufficiently answered</strong> &mdash; a qualitative judgment made by the LLM, not just a counting exercise.</p>
+
+        <p>When it does continue, the Gap Scorer generates targeted queries:</p>
+
+        <ul>
+          <li>Missing benchmark coverage? → "benchmark dataset evaluation {topic}"</li>
+          <li>Missing seminal papers? → "{topic} seminal foundational original"</li>
+          <li>Questions raised by findings? → follow-up queries derived from claim analysis</li>
+        </ul>
+
+        <h2>The Debugging Story: What Broke and How We Fixed It</h2>
+
+        <p>The design above reads cleanly. The reality was messier. Here are the real failures we encountered and how we traced and fixed them.</p>
+
+        <h3>The Zero-Paper Report</h3>
+
+        <p>The first major failure was dramatic: the system ran for 5 iterations, appeared to work, and produced a report with <strong>zero papers reviewed, zero claims, and empty sections</strong>. The abstract was pure hallucination.</p>
+
+        <p>We traced the problem through the pipeline. The retriever was finding papers &mdash; 33 candidates in a test run. But the triage agent was passing zero papers to ingestion. Why?</p>
+
+        <p>The root cause was a one-line change in error handling. An earlier version of triage had a <code>try/except json.JSONDecodeError</code> block that, on parse failure, accepted all papers in the batch (a safe fallback). Someone had changed this to <em>log the error and skip the batch</em>:</p>
+
+<pre><code class="language-python">except json.JSONDecodeError:
+    state.log_action("triage", "batch_parse_error", {...})
+    # silently drops all papers in the batch</code></pre>
+
+        <p>This wouldn't have been catastrophic if the LLM consistently returned clean JSON. But LLMs frequently wrap their output in markdown code fences &mdash; <code>```json\n{...}\n```</code> &mdash; even when explicitly told "Output ONLY valid JSON." The <code>json.loads()</code> call failed on every batch, and every batch was silently dropped.</p>
+
+        <p>The fix was two-fold:</p>
+
+        <ol>
+          <li><strong>A central <code>parse_llm_json</code> helper</strong> that strips markdown code fences before parsing. This was added to <code>base.py</code> and used by every agent that parses LLM output.</li>
+          <li><strong>Restoring the fail-open fallback</strong> in triage: if parsing still fails after fence stripping, accept all papers.</li>
+        </ol>
+
+        <p>We then audited every agent for the same vulnerability and found the same raw <code>json.loads()</code> pattern in <em>eight</em> agents. All were migrated to <code>parse_llm_json</code> with appropriate fallbacks. This was the single most impactful bug fix in the project.</p>
+
+        <h3>The Seven-Reference Problem</h3>
+
+        <p>After fixing the zero-paper bug, the system successfully reviewed 56 papers and extracted 349 claims. But the final report only cited <strong>7 papers</strong> across all sections. What happened to the other 49?</p>
+
+        <p>The problem was in how the Synthesiser matched claims to sections. The original matching used a hardcoded keyword map:</p>
+
+<pre><code class="language-python">section_claim_types = {
+    "methods": [ClaimType.METHOD_SUMMARY],
+    "experiments": [ClaimType.EMPIRICAL_RESULT],
+    ...
+}</code></pre>
+
+        <p>For section titles produced by the Outline Refiner &mdash; like "Evolution of Transformer Architectures" or "Comparative Analysis" &mdash; none of these keywords matched. The fallback was to include <em>all claim types</em>, meaning every section received the same undifferentiated pool of claims. The LLM, given the same material for every section, naturally gravitated to the same few well-known papers.</p>
+
+        <p>Additionally, the Synthesiser was only showing the LLM <strong>25 papers</strong> (half the corpus) and <strong>30 claims</strong> per section, with chunk excerpts truncated to 500 characters. This was nowhere near enough context for survey-level depth.</p>
+
+        <p>The fix was comprehensive:</p>
+
+        <ul>
+          <li><strong>Scored multi-signal matching</strong> using claim types, keyword overlap, and entity names</li>
+          <li><strong>Paper diversity caps</strong> (max 8 claims per source paper per section)</li>
+          <li><strong>Raised context limits</strong>: 50 papers, 50 claims, 25 chunks at 800 characters</li>
+          <li><strong>Rewritten prompt</strong> demanding 800&ndash;2000 words per section with citation in nearly every sentence</li>
+        </ul>
+
+        <h3>The 35-Megabyte State</h3>
+
+        <p>After raising the context limits, we started hitting a different problem: LangSmith logging failures with "field size 35803304 exceeds maximum allowed size of 26214400 bytes." The state was too large.</p>
+
+        <p>LangGraph serialises the entire <code>ResearchState</code> for every node transition (for checkpointing). With 56 papers, each containing <code>full_text</code> (50&ndash;100KB of raw academic text), plus hundreds of accumulated LLM messages, plus never-pruned candidate lists &mdash; the state had ballooned to 35MB.</p>
+
+        <p>The fix targeted three sources of bloat:</p>
+
+        <ol>
+          <li><strong>Stop storing <code>full_text</code></strong>: The ingestion agent creates chunks and that's the downstream format. No agent ever reads <code>paper.full_text</code>. We removed the three lines that populated it.</li>
+          <li><strong>Prune candidates after triage</strong>: Rejected papers are dead weight. After screening, the triage agent now returns only selected papers in <code>candidate_papers</code>.</li>
+          <li><strong>Replace message accumulation with replacement semantics</strong>: The <code>messages</code> field originally used LangGraph's <code>add_messages</code> reducer, which accumulated every <code>[SystemMessage, HumanMessage, AIMessage]</code> across the entire run. No agent uses this accumulated history &mdash; each creates fresh messages. Switching to plain replacement semantics eliminated the largest source of bloat.</li>
+          <li><strong>Cap the audit log</strong> at 500 entries to prevent unbounded growth across many iterations.</li>
+        </ol>
+
+        <p>These changes reduced state size from ~35MB to well under 5MB.</p>
+
+        <h2>Grounding: The Core Principle</h2>
+
+        <p>Throughout the design, one principle dominates: <strong>no phantom citations</strong>.</p>
+
+        <p>In a typical LLM application, the model might generate "Studies show that..." without any actual studies. Our architecture makes this structurally difficult:</p>
+
+        <ol>
+          <li>The Synthesiser only sees claims that were extracted from real papers</li>
+          <li>Every claim has evidence pointers to specific chunks</li>
+          <li>The Verifier flags any statement without a citation</li>
+          <li>The Citation Manager validates that every citekey resolves to an ingested paper</li>
+          <li>Unresolvable citations are marked with <code>[?...]</code> in the output, making them visible</li>
+        </ol>
+
+        <p>This isn't just prompt engineering saying "don't hallucinate." It's architectural enforcement through data flow. The Synthesiser literally cannot cite a paper that wasn't ingested, because its prompt only contains paper IDs from the knowledge base.</p>
+
+        <h2>Handling the Messy Reality of Academic Papers</h2>
+
+        <p>Academic papers come in many formats, and extracting clean text is harder than it sounds.</p>
+
+        <h3>The Ingestion Strategy</h3>
+
+        <p>We try multiple sources in order of preference:</p>
+
+        <ol>
+          <li><strong>arXiv HTML</strong>: Best structure, clear section boundaries. Not always available.</li>
+          <li><strong>PDF</strong>: Most complete, but parsing is lossy. Tables and equations often mangle.</li>
+          <li><strong>Web HTML</strong>: Fallback for non-arXiv papers.</li>
+          <li><strong>Abstract only</strong>: Last resort. Better than nothing.</li>
+        </ol>
+
+<pre><code class="language-python">def ingest_paper(paper: Paper) -> List[Chunk]:
+    if paper.arxiv_id:
+        chunks = try_arxiv_html_ingestion(paper)
+        if chunks: return chunks
+
+    pdf_url = paper.get_pdf_url()
+    if pdf_url:
+        chunks = try_pdf_ingestion(paper, pdf_url)
+        if chunks: return chunks
+
+    for url in paper.url_list:
+        if url and not url.endswith(".pdf"):
+            chunks = try_html_ingestion(paper, url)
+            if chunks: return chunks
+
+    if paper.abstract:
+        return [Chunk.create(paper_id=paper.paper_id,
+                             text=f"Title: {paper.title}\n\nAbstract: {paper.abstract}",
+                             source_type=SourceType.WEB_HTML)]
+    return []</code></pre>
+
+        <h3>Section-Aware Chunking</h3>
+
+        <p>Naive chunking (split every N characters) loses structure. We use section-aware chunking that:</p>
+
+        <ol>
+          <li>Identifies section headings (<code>##</code> in markdown, numbered sections, common names like "Introduction")</li>
+          <li>Keeps section boundaries intact when possible</li>
+          <li>Stores section path in chunk metadata for better retrieval</li>
+        </ol>
+
+        <p>This means when you search for "evaluation methodology," you're more likely to get chunks from Methods sections than random paragraphs.</p>
+
+        <h2>What We Learned</h2>
+
+        <p>Building this system taught us several lessons &mdash; some expected, some painful.</p>
+
+        <p><strong>1. LLMs will disobey formatting instructions.</strong> Even with "Output ONLY valid JSON" in the prompt, LLMs wrap JSON in markdown fences, add trailing commentary, use single quotes, and include comments. You need a robust parsing layer between the LLM and your code. Our <code>parse_llm_json</code> helper, which strips code fences and falls back gracefully, was the single most impactful utility we wrote.</p>
+
+        <p><strong>2. Silent failures are the worst failures.</strong> The zero-paper bug existed because the triage agent silently swallowed parse errors. If it had logged an error and crashed, we'd have caught it immediately. Every agent now has explicit fallback behaviour that <em>preserves data</em> rather than dropping it. The principle: fail-open, not fail-closed.</p>
+
+        <p><strong>3. State management is everything &mdash; including state <em>size</em>.</strong> Explicit, typed state (via Pydantic) made debugging possible. But we learned the hard way that state size matters too. Storing full paper text, accumulating LLM messages, and keeping rejected candidates around caused a 35MB state that broke checkpointing. Every field in the state should justify its existence: if nothing downstream reads it, don't store it.</p>
+
+        <p><strong>4. Structured extraction beats RAG.</strong> Retrieving chunks and hoping the LLM figures it out works okay. Extracting claims and entities first, then synthesising from structured data, works much better &mdash; because you can route typed claims to the right sections and enforce source diversity.</p>
+
+        <p><strong>5. Survey writing is harder than you'd think.</strong> A prompt that says "write a comprehensive section" produces blog-post-quality prose. You need to be explicit about word counts, citation density, subsection structure, and specific numbers. And you need enough context &mdash; 50 papers and 50 claims per section, not 25 and 30.</p>
+
+        <p><strong>6. The outline should be deferred.</strong> Early versions locked in the outline at planning time, before any papers were read. The result was a mismatch between the planned structure and the actual findings. Deferring the outline to after research &mdash; and reshaping it based on what was actually discovered &mdash; produces a much more coherent survey.</p>
+
+        <p><strong>7. Iteration beats perfection.</strong> A system that tries to get everything right in one pass will fail. A system that iterates &mdash; search, evaluate, search more &mdash; converges on quality. But the iteration needs to be <em>targeted</em>: not just "do more research" but "we're missing seminal papers on X" or "the writing in Section 3 is unsupported."</p>
+
+        <p><strong>8. The reviewer needs multiple remediation paths.</strong> Routing everything through "more research" is a blunt instrument. Sometimes the research is fine but the writing is shallow. Adding a "resynthesize" path &mdash; letting the reviewer send the draft back to the Synthesiser without re-searching &mdash; was a significant quality improvement.</p>
+
+        <h2>The Road Ahead</h2>
+
+        <p>This system is functional and produces survey-quality output, but there's more to do:</p>
+
+        <ul>
+          <li><strong>Better PDF parsing</strong>: Tables, figures, and equations are still lossy. Multimodal extraction could help.</li>
+          <li><strong>Citation graph analysis</strong>: Using citation relationships between papers to find seminal works, rather than relying on keyword search alone.</li>
+          <li><strong>Human-in-the-loop</strong>: Allowing users to steer the research &mdash; approving/rejecting papers, highlighting gaps, adjusting the outline mid-run.</li>
+          <li><strong>Persistent knowledge base</strong>: Reusing extracted knowledge across research sessions rather than starting from scratch each time.</li>
+          <li><strong>Multilingual retrieval</strong>: Searching non-English sources and normalising to a canonical language.</li>
+          <li><strong>Cheaper models for screening</strong>: Using smaller, faster models for triage and extraction, reserving GPT-4o for synthesis and review.</li>
+        </ul>
+
+        <h2>Conclusion</h2>
+
+        <p>Building a research assistant that actually assists with research &mdash; rather than just producing plausible-sounding text &mdash; required rethinking the architecture from the ground up. Single-prompt solutions will always struggle with grounding, coverage, and quality.</p>
+
+        <p>The multi-agent approach lets us decompose a complex cognitive task into manageable pieces. The iterative loop lets us converge on quality rather than hoping to achieve it in one shot. The strict provenance tracking ensures that every claim in the output can be traced back to its source. And the debugging journey &mdash; from zero-paper reports to 35MB state blowups to shallow seven-reference surveys &mdash; taught us that the difference between a demo and a working system is mostly in the error handling.</p>
+
+        <p>The result isn't just a tool that writes papers. It's a system that thinks about research the way researchers do &mdash; methodically, critically, and always asking: "Where's the evidence for that?"</p>
+
+        <hr>
+
+        <p><em>The complete implementation is available at <a href="https://github.com/SanniM3/research-assistant" target="_blank" rel="noopener">github.com/SanniM3/research-assistant</a>.</em></p>
+      </div>
+      
+      <footer class="blog-footer">
+        <a href="../index.html#blog" class="blog-footer-link">
+          <ion-icon name="arrow-back"></ion-icon>
+          <span>Back to all posts</span>
+        </a>
+      </footer>
+    </article>
+    
+    <!-- Site Footer -->
+    <footer class="site-footer">
+      <div class="site-footer-content">
+        <p class="copyright">© 2026 Mardhiyah Sanni</p>
+        <p class="ai-disclosure">Some content created in collaboration with generative AI.</p>
+      </div>
+    </footer>
+  </div>
+  
+  <!-- Scripts -->
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    }
+    
+    window.addEventListener('scroll', () => {
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const scrolled = (window.scrollY / docHeight) * 100;
+      document.getElementById('reading-progress').style.width = scrolled + '%';
+    });
+  </script>
+  
+  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+</body>
+</html>
