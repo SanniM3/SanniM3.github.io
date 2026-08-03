@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Implementing a BPE Tokenizer from Scratch | Mardhiyah Sanni</title>
+  <meta name="description" content="Building a loose-but-faithful Byte Pair Encoding tokenizer from scratch, one merge at a time">
+  
+  <link rel="shortcut icon" href="../assets/images/favicon.ico" type="image/x-icon">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="../assets/css/main.css">
+  
+  <!-- Code Highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  
+  <!-- MathJax -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  
+  <!-- Theme Initialization -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>
+<body>
+  <div class="blog-wrapper">
+    <div class="reading-progress" id="reading-progress"></div>
+    
+    <nav class="blog-nav">
+      <div class="blog-nav-inner">
+        <a href="../index.html" class="blog-back-link">
+          <ion-icon name="arrow-back"></ion-icon>
+          <span>Back to Home</span>
+        </a>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+          <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </nav>
+    
+    <article class="blog-article">
+      <header class="blog-header">
+        <span class="blog-header-category">Paper Reimplementation</span>
+        <h1 class="blog-header-title">Implementing a BPE Tokenizer from Scratch</h1>
+        <p class="blog-header-subtitle"><em>A loose-but-faithful Byte Pair Encoding tokenizer, built one merge at a time</em></p>
+        <div class="blog-header-meta">
+          <div class="blog-header-meta-item">
+            <ion-icon name="time-outline"></ion-icon>
+            <span>16 min read</span>
+          </div>
+        </div>
+      </header>
+      
+      <div class="blog-content">
+
+        <p>I've been rereading about tokenizers lately, and I kept coming back to Byte Pair Encoding. It's one of those ideas that sits quietly under every large language model you've ever used, doing an enormous amount of work, and yet the core algorithm is so simple you can hold the whole thing in your head at once. So I decided to implement it from scratch.</p>
+
+        <p>I want to be upfront about one thing: this is a <em>loose</em> implementation. It is not bit-for-bit faithful to what the original GPT-2 authors shipped &mdash; there's no byte-level regex pre-tokenizer, no careful handling of Unicode byte fallbacks, none of the production hardening. But it bears the same ideas, and those ideas are the point. If you understand the version in this post, the real thing becomes an exercise in engineering rather than an exercise in insight.</p>
+
+        <p>This post walks through my implementation the way I actually thought about it, class method by class method, with the intuition I built along the way. At the end I'll be honest about exactly where my version drifts from the canonical one, because knowing where you cut corners is half of understanding a thing.</p>
+
+        <h2>Why BPE exists at all</h2>
+
+        <p>Before any code, it helps to remember the problem BPE is solving. When you feed text to a model, you have to turn it into a sequence of integers first. There are two obvious ways to do this, and both are bad.</p>
+
+        <p>You could tokenize by <strong>word</strong>. Now "run", "running", and "runner" are three unrelated integers, your vocabulary is enormous, and the first time you see a word you didn't train on, you're stuck with an <code>&lt;UNK&gt;</code> token and a shrug.</p>
+
+        <p>Or you could tokenize by <strong>character</strong>. Now your vocabulary is tiny and nothing is ever out-of-vocabulary &mdash; but your sequences are painfully long, and the model has to relearn that "t", "h", "e" almost always travel together as "the".</p>
+
+        <p>BPE is the compromise that refuses to choose. It starts from characters (so nothing is ever truly unknown) and then <em>learns</em> which adjacent pairs occur so often that they deserve to be fused into a single token. Common words end up as one token, rare words gracefully fall apart into subword pieces, and the vocabulary size is something you get to control. The algorithm that achieves this is almost embarrassingly small: repeatedly find the most frequent adjacent pair of tokens and merge it. That's it. That's the whole trick.</p>
+
+        <h2>The shape of the class</h2>
+
+        <p>Everything hangs off three dictionaries, so it's worth pinning them down before anything else:</p>
+
+<pre><code class="language-python">import re
+from collections import Counter, deque
+
+
+class BPETokenizerSimple:
+    def __init__(self):
+        self.vocab = {}          # token_id -> actual token string
+        self.inverse_vocab = {}  # actual token string -> token_id
+        self.bpe_merges = {}     # (token_id1, token_id2) -> new_token_id</code></pre>
+
+        <p><code>vocab</code> and <code>inverse_vocab</code> are just two directions of the same lookup table &mdash; one maps IDs to strings, the other maps strings back to IDs. <code>bpe_merges</code> is the interesting one: it's the <em>learned</em> part, the record of every "these two tokens should become this one new token" decision the training made. Encoding is really just replaying those decisions.</p>
+
+        <h2>Preprocessing: the space trick</h2>
+
+        <p>The first thing training does is a small sleight of hand with spaces. Instead of keeping spaces as their own characters, it glues a special marker &mdash; <code>Ġ</code> &mdash; onto the front of every word that follows a space:</p>
+
+<pre><code class="language-python">    def train(self, text, vocab_size, allowed_special=None):
+        # avoid a mutable default argument; build the set inside instead
+        if allowed_special is None:
+            allowed_special = {"&lt;|endoftext|&gt;"}
+
+        processed_text = []
+        for i, char in enumerate(text):
+            if i != 0 and char == " ":
+                processed_text.append("Ġ")
+            if char != " ":
+                processed_text.append(char)
+        # this is essentially a copy of the text with the inter-word
+        # spaces replaced by the marker "Ġ"
+        processed_text = "".join(processed_text)</code></pre>
+
+        <p>So <code>"the cat sat"</code> becomes <code>"theĠcatĠsat"</code>. Why bother? Because "where a word begins" is genuinely useful information, and this trick smuggles it directly into the tokens. The <code>Ġ</code> that leads "Ġcat" tells the model this is "cat, preceded by a space" as opposed to a "cat" glued onto something else. It also means spaces stop being free-floating tokens that dilute your statistics; they get absorbed into the words they introduce. Notice the space at position 0 is deliberately dropped &mdash; the very first word of the text has no preceding space, so it never gets a marker.</p>
+
+        <h2>Building the base vocabulary</h2>
+
+        <p>Before we can merge anything, we need something to merge <em>from</em>. That's the base vocabulary: the atomic tokens BPE is never allowed to break apart. I seed it with the first 256 characters, then top it up with anything in the text I haven't already covered, the <code>Ġ</code> marker, and any special tokens:</p>
+
+<pre><code class="language-python">        unique_chars = [chr(i) for i in range(256)]  # the base characters
+        seen = set(unique_chars)  # O(1) membership instead of scanning a list
+
+        # extend with any characters in the text not already covered
+        for char in sorted(set(processed_text)):
+            if char not in seen:
+                unique_chars.append(char)
+                seen.add(char)
+
+        if "Ġ" not in seen:
+            unique_chars.append("Ġ")
+            seen.add("Ġ")
+
+        # add special tokens
+        if allowed_special:
+            for spec in allowed_special:
+                if spec not in seen:
+                    unique_chars.append(spec)
+                    seen.add(spec)
+
+        # now create the vocab and inverse_vocab lookups
+        for idx, char in enumerate(unique_chars):
+            self.vocab[idx] = char
+            self.inverse_vocab[char] = idx</code></pre>
+
+        <p>Starting from all 256 single-byte characters is what gives BPE its "nothing is ever unknown" guarantee: in the worst case, any word can always be spelled out one character at a time. Everything we learn on top of this is pure compression &mdash; a way of saying the same thing in fewer tokens.</p>
+
+        <p>The special tokens (like <code>&lt;|endoftext|&gt;</code>) are added as whole, indivisible entries. They live in the vocabulary but never appear in the training text, so the merging process leaves them untouched, exactly as we want.</p>
+
+        <h2>The merge loop</h2>
+
+        <p>Now the actual algorithm. First I translate the preprocessed text into the sequence of base IDs it corresponds to, and then I loop, one new token at a time, until I've grown the vocabulary to the size I asked for:</p>
+
+<pre><code class="language-python">        # we need the token_ids of the processed text to train BPE on it
+        token_ids = [self.inverse_vocab[char] for char in processed_text]
+
+        # each iteration mints exactly one new token, so i is the id we assign
+        for i in range(len(self.vocab), vocab_size):
+            # if there's fewer than two tokens, there is no pair to make
+            if len(token_ids) &lt; 2:
+                break
+
+            # find the most frequent adjacent pair in the current sequence
+            pair_id = self.find_freq_pair(token_ids, mode='most')
+            if pair_id is None:
+                break
+
+            # replace every occurrence of that pair with the new id, i
+            updated_token_ids = self.replace_pair(token_ids, pair_id, i)
+
+            # if nothing changed, there's nothing left to learn
+            # (near-impossible if pair_id exists, but a safe guard)
+            if updated_token_ids == token_ids:
+                break
+
+            token_ids = updated_token_ids
+            # keep a record of the merge we just made
+            self.bpe_merges[pair_id] = i</code></pre>
+
+        <p>The loop variable <code>i</code> is doing double duty and it's worth pausing on. It starts at <code>len(self.vocab)</code> &mdash; the first free ID after the base vocabulary &mdash; and every iteration it becomes the ID of the brand-new merged token. So iteration and identity are the same thing here: the <em>n</em>-th merge <em>is</em> token number <code>len(base) + n</code>. That's why I can just write <code>self.bpe_merges[pair_id] = i</code> and be done.</p>
+
+        <p>Each pass shrinks the sequence a little (every merge collapses two tokens into one), so the text gets steadily more compressed as the vocabulary grows. The loop stops either when we hit the target vocabulary size or when the text is so compressed there are no pairs left to merge.</p>
+
+        <h2>Counting pairs and replacing them</h2>
+
+        <p>Two small static helpers do the heavy lifting. Finding the most frequent pair is a one-liner thanks to <code>Counter</code> and <code>zip</code>:</p>
+
+<pre><code class="language-python">    @staticmethod
+    def find_freq_pair(token_ids, mode='most'):
+        # fewer than two tokens means no pair exists
+        if len(token_ids) &lt; 2:
+            return None
+
+        # zip(token_ids, token_ids[1:]) yields every adjacent pair
+        all_pairs = Counter(zip(token_ids, token_ids[1:]))
+
+        if mode == "most":
+            return max(all_pairs.items(), key=lambda x: x[1])[0]
+        elif mode == "least":
+            return min(all_pairs.items(), key=lambda x: x[1])[0]
+        else:
+            raise ValueError("Invalid mode. Options are 'most' or 'least'")</code></pre>
+
+        <p>The <code>zip(token_ids, token_ids[1:])</code> idiom is my favourite part &mdash; it slides a window of width two across the sequence and hands you every adjacent pair, which <code>Counter</code> then tallies in one shot.</p>
+
+        <p>Replacing a pair is slightly more delicate, because once you merge a pair you must skip past it rather than re-examine the token you just consumed. I use a <code>deque</code> so I can keep popping from the front and always look at the "current" token and its immediate neighbour:</p>
+
+<pre><code class="language-python">    @staticmethod
+    def replace_pair(token_ids, pair_id, new_id):
+        updated_token_ids = []
+        dq = deque(token_ids)
+
+        while dq:
+            current_id = dq.popleft()
+            # peek at the next id; if the pair matches, merge them
+            if len(dq) &gt; 0 and (current_id, dq[0]) == pair_id:
+                updated_token_ids.append(new_id)
+                dq.popleft()  # consume the second half of the pair too
+            else:
+                updated_token_ids.append(current_id)
+
+        return updated_token_ids</code></pre>
+
+        <p>The <code>deque</code> makes the "look at two, sometimes consume two" logic clean: pop the current token, peek at what's now at the front, and if together they form the pair we're merging, emit the new ID and pop the neighbour as well. Otherwise emit the current token untouched and move on.</p>
+
+        <h2>Turning merges back into strings</h2>
+
+        <p>At this point <code>bpe_merges</code> knows that, say, pair <code>(12, 15)</code> became token <code>256</code> &mdash; but <code>vocab</code> doesn't yet know what the <em>string</em> for token 256 looks like. Closing that gap is the last step of training:</p>
+
+<pre><code class="language-python">        # given a merge (12, 15) -> 256, the string for 256 is just the
+        # concatenation of the strings for 12 and 15
+        for (p0, p1), new_id in self.bpe_merges.items():
+            new_str = self.vocab[p0] + self.vocab[p1]
+            self.vocab[new_id] = new_str
+            self.inverse_vocab[new_str] = new_id</code></pre>
+
+        <p>There's a subtle reason this works in a single pass, and it took me a second to convince myself of it. A merged token is always built from two tokens with <em>smaller</em> IDs &mdash; they're either base characters or earlier merges. And because Python dictionaries preserve insertion order, and I inserted merges in increasing-ID order, by the time I reach any given merge its two ingredients already have their strings resolved. The dependency chain always points backwards, so one forward sweep is enough.</p>
+
+        <h2>Encoding: replaying the merges</h2>
+
+        <p>Training was about <em>discovering</em> merges; encoding is about <em>applying</em> them. I mirror the original GPT-2 design and treat each word as its own little encoding problem, re-attaching the <code>Ġ</code> marker to every word except the first. I also peel off any special tokens up front so they're never accidentally chewed apart:</p>
+
+<pre><code class="language-python">    def encode(self, text, allowed_special=None):
+        token_ids = []
+
+        # peel off any special tokens first so they map straight to their
+        # ids and are never broken apart by BPE
+        if allowed_special:
+            special_pattern = "(" + "|".join(re.escape(tok) for tok in allowed_special) + ")"
+            segments = re.split(special_pattern, text)
+        else:
+            segments = [text]
+
+        for segment in segments:
+            if allowed_special and segment in allowed_special:
+                token_ids.append(self.inverse_vocab[segment])
+                continue
+
+            # ordinary text: split() drops whitespace, so we re-add the
+            # space marker to every word except the first of this segment
+            for i, word in enumerate(segment.split()):
+                token = word if i == 0 else "Ġ" + word
+                # if the whole word is a known token, use it directly;
+                # otherwise fall back to merging its characters
+                if token in self.inverse_vocab:
+                    token_ids.append(self.inverse_vocab[token])
+                else:
+                    token_ids.extend(self.tokenize_with_bpe(token))
+
+        return token_ids</code></pre>
+
+        <p>Two things are happening here. First, I split off any special tokens with a regex so they map straight to their own IDs and never get merged into their neighbours. Then, for ordinary text, there's a whole-word shortcut: if a common word became its own token during training, we look it up in one step instead of rebuilding it from characters. Everything else falls through to <code>tokenize_with_bpe</code>, which is where the merges actually get replayed.</p>
+
+        <h2>The priority-ordered merging loop</h2>
+
+        <p>This method is the heart of encoding, and it's the one I put the most thought into. The subtlety is that <em>order matters</em>. BPE didn't learn its merges all at once; it learned them one at a time, and that order is a priority ranking. To reproduce the tokenization the training statistics imply, encoding has to apply merges in exactly that order &mdash; always the highest-priority merge available, before any lower-priority one. A naive left-to-right sweep that grabs whatever merge it hits first can produce a different (and technically wrong) split.</p>
+
+        <p>Here's the lovely part: I already have the ranking for free. Because every merge is assigned the next available ID the moment it's learned, a token's ID <em>is</em> its rank &mdash; a smaller ID means an earlier, higher-priority merge. So each pass I scan every adjacent pair, ask <code>bpe_merges</code> for its rank, and pick the pair with the smallest rank. Then I merge <em>all</em> occurrences of that one pair and scan again.</p>
+
+<pre><code class="language-python">    def tokenize_with_bpe(self, token):
+        token_ids = [self.inverse_vocab.get(char, None) for char in token]
+
+        # any character not in the vocab is a hard error
+        if None in token_ids:
+            missing = [c for c, tid in zip(token, token_ids) if tid is None]
+            raise ValueError(f"Characters not found in vocab: {missing}")
+
+        # apply merges in the order they were learned. a merge's new id
+        # grows with every training step, so a smaller id == an earlier,
+        # higher-priority merge. each pass we pick the highest-priority
+        # pair currently present and merge all of its occurrences.
+        while len(token_ids) &gt; 1:
+            best_pair = None
+            best_rank = None
+            for pair in zip(token_ids, token_ids[1:]):
+                rank = self.bpe_merges.get(pair)
+                if rank is not None and (best_rank is None or rank &lt; best_rank):
+                    best_rank = rank
+                    best_pair = pair
+
+            # no pair in the sequence is mergeable -> we've reached the end
+            if best_pair is None:
+                break
+
+            # merge every occurrence of that one pair, then re-scan
+            token_ids = self.replace_pair(token_ids, best_pair, best_rank)
+
+        return token_ids</code></pre>
+
+        <p>Notice how this reuses <code>replace_pair</code> from training &mdash; the same routine that merged every occurrence of the winning pair while <em>learning</em> now merges every occurrence of the winning pair while <em>encoding</em>. That symmetry is the whole point: encoding is training's merge step, replayed in priority order. The re-scan after each merge is also what lets cascades resolve naturally &mdash; once <code>(11, 17)</code> becomes <code>256</code>, the next pass can see and merge <code>(256, 5)</code> if that merge outranks whatever else is left.</p>
+
+        <p>And it always terminates for the same reason training does: each pass either merges a pair (shrinking the sequence by at least one) or finds no mergeable pair and breaks. A sequence can't shrink forever, so we always reach a point where nothing is left to merge.</p>
+
+        <h2>Decoding</h2>
+
+        <p>Decoding is the easy direction &mdash; look each ID up, glue the strings together, and undo the space trick by turning every <code>Ġ</code> back into a real space:</p>
+
+<pre><code class="language-python">    def decode(self, token_ids):
+        decoded_string = ""
+        for token_id in token_ids:
+            if token_id not in self.vocab:
+                raise ValueError(f"Token ID {token_id} not in vocabulary")
+            token = self.vocab[token_id]
+            decoded_string += token.replace("Ġ", " ")
+        return decoded_string</code></pre>
+
+        <p>Because the first word never received a <code>Ġ</code>, there's no phantom leading space to clean up &mdash; the asymmetry we built into preprocessing pays off exactly here.</p>
+
+        <h2>Where this version is still "loose"</h2>
+
+        <p>I promised honesty about the corners I cut, and this is the section that actually reflects how well you understand BPE &mdash; knowing what you left out. Now that encoding respects merge priority, two places remain where my implementation diverges from the canonical one.</p>
+
+        <p><strong>1. Pair counting double-counts overlaps.</strong> During training, <code>Counter(zip(token_ids, token_ids[1:]))</code> counts overlapping occurrences, so the sequence <code>[a, a, a]</code> reports the pair <code>(a, a)</code> twice &mdash; but <code>replace_pair</code> can only actually merge it once (the two halves can't share the middle <code>a</code>). The frequency counts are therefore a slight overestimate for self-overlapping pairs. It rarely changes which pair wins, but it's not exact.</p>
+
+        <p><strong>2. Whitespace handling is simplified.</strong> Training walks the raw text and turns every non-leading space into a <code>Ġ</code>, so runs of consecutive spaces become runs of markers. Encoding uses <code>split()</code>, which collapses all whitespace, so multiple spaces, tabs, and newlines don't round-trip faithfully. The real GPT-2 tokenizer sidesteps all of this with a byte-level regex pre-tokenizer that carves text into pieces in a well-defined way before BPE ever runs. I skipped that entirely &mdash; it's the single biggest gap between "loose" and "real".</p>
+
+        <p>Neither of these breaks the tokenizer; it trains, encodes, and decodes round-trip cleanly on ordinary text. They're the difference between something that <em>demonstrates</em> BPE and something you'd ship.</p>
+
+        <h2>Closing thoughts</h2>
+
+        <p>What I love about BPE is how much mileage it gets out of a single, almost trivial move: find the most common pair, fuse it, repeat. There's no gradient descent, no clever loss function, no neural network anywhere in sight &mdash; just counting and merging. And yet this little greedy loop produces the vocabularies that sit underneath models with hundreds of billions of parameters.</p>
+
+        <p>Writing it out by hand made a few things click that never quite landed when I only read about it. That merges are just a replayable list of decisions. That IDs and iteration order are the same thing during training &mdash; and that this same numbering doubles as the priority ranking encoding needs to replay those decisions faithfully. That encoding and training are two sides of one coin &mdash; one discovers the merges, the other reapplies them in the very order they were found.</p>
+
+        <p>If you want to take this further, the natural next step is a proper byte-level regex pre-tokenizer to handle whitespace and punctuation the way the original does. Add that and you're most of the way to the real GPT-2 tokenizer &mdash; but the ideas, the actual insight, are already all here.</p>
+
+      </div>
+      
+      <footer class="blog-footer">
+        <a href="../index.html#blog" class="blog-footer-link">
+          <ion-icon name="arrow-back"></ion-icon>
+          <span>Back to all posts</span>
+        </a>
+      </footer>
+    </article>
+    
+    <!-- Site Footer -->
+    <footer class="site-footer">
+      <div class="site-footer-content">
+        <p class="copyright">© 2026 Mardhiyah Sanni</p>
+        <p class="ai-disclosure">Some content created in collaboration with generative AI.</p>
+      </div>
+    </footer>
+  </div>
+  
+  <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+  
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    }
+    
+    window.addEventListener('scroll', () => {
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const scrolled = (window.scrollY / docHeight) * 100;
+      document.getElementById('reading-progress').style.width = scrolled + '%';
+    });
+    
+    document.addEventListener('DOMContentLoaded', () => { hljs.highlightAll(); });
+  </script>
+  
+  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+</body>
+</html>
