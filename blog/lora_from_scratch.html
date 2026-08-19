@@ -74,9 +74,9 @@
 
         <p>This is where LoRA comes in.</p>
 
-        <p>LoRA—Low-Rank Adaptation—is one of those ideas that seems obvious in hindsight but took genuine insight to discover. The core observation is simple: when you fine-tune a pretrained model, the weight updates don't need to be full-rank matrices. You can represent them as the product of two much smaller matrices, dramatically reducing the number of trainable parameters while maintaining—and sometimes even improving—model quality.</p>
+        <p>LoRA, Low-Rank Adaptation, is based on the core observation that when you fine-tune a pretrained model, the weight updates don't need to be full-rank matrices. You can represent them as the product of two much smaller matrices, dramatically reducing the number of trainable parameters while maintaining (and sometimes even improving) model quality.</p>
 
-        <p>In this post, I want to build LoRA from scratch. Not just the forward pass, but a complete implementation that you could actually use to fine-tune a model. Along the way, I'll dig into the memory implications, explain why certain design choices matter, and share some practical insights about making LoRA work well.</p>
+        <p>In this post, I will build LoRA from scratch. Not just the forward pass, but a complete implementation that you could actually use to fine-tune a model. Along the way, I'll dig into the memory implications, explain why certain design choices matter, and share some practical insights about making LoRA work well.</p>
 
         <h2>The problem with full fine-tuning</h2>
 
@@ -90,7 +90,7 @@
           <li><strong>Optimiser states</strong>: For Adam, that's 2× more ($d \times k$ each for momentum and variance)</li>
         </ul>
 
-        <p>So for each weight matrix, you need roughly 4× the parameters in memory during training (weights + gradients + 2 optimiser states). For a 7B parameter model in float32, that's about 112GB just for these components—before you even account for activations.</p>
+        <p>So for each parameter, training with Adam requires roughly four values in memory: the weight itself, its gradient, and two optimiser states (the momentum and variance estimates). In float32, each of those values takes 32bits, or 4bytes. That means a 7B-parameter model requires about \(7 \times 10^9 \times 4 = 28\,\text{GB}\) just to store the weights Including the gradient and Adam's two optimser states brings this to roughly \(28 \times 4 = 112\,\text{GB}\), before even accounting for activations.</p>
 
         <p>The question LoRA asks is: do we really need all those parameters?</p>
 
@@ -114,12 +114,12 @@
 
         <p>where $W_0$ is the frozen pretrained weight.</p>
 
-        <p>Let's do some quick math. For a weight matrix of shape $(4096, 4096)$—typical for attention projections in a 7B model—full fine-tuning requires $4096 \times 4096 = 16.7M$ trainable parameters per matrix. With LoRA at rank $r = 8$:</p>
+        <p>Let's do some quick math. For a layer with weight matrix of shape $(4096, 4096)$ (which is typical for attention projections in a 7B model), full fine-tuning requires $4096 \times 4096 = 16.7M$ trainable parameters per matrix. With LoRA at rank $r = 8$:</p>
 
         <ul>
           <li>$B$: $4096 \times 8 = 32,768$ parameters</li>
           <li>$A$: $8 \times 4096 = 32,768$ parameters</li>
-          <li>Total: $65,536$ parameters—about <strong>0.4%</strong> of the original</li>
+          <li>Total: $65,536$ parameters, which is about <strong>0.4%</strong> of the original</li>
         </ul>
 
         <p>That's a 256× reduction in trainable parameters for a single layer. Across the entire model, the savings are enormous.</p>
@@ -211,7 +211,7 @@ class LoRALinear(nn.Module):
 
         <p>A few important details here:</p>
 
-        <p><strong>Initialisation matters.</strong> Matrix $A$ is initialised with a small random distribution (Kaiming uniform), but $B$ is initialised to zero. This means at the start of training, $\Delta W = BA = 0$, so the model behaves exactly like the pretrained model. This is crucial—you don't want to destroy the pretrained knowledge on the first forward pass.</p>
+        <p><strong>Initialisation matters.</strong> Matrix $A$ is initialised with a small random distribution (Kaiming uniform), but $B$ is initialised to zero. This means at the start of training, $\Delta W = BA = 0$, so the model behaves exactly like the pretrained model. This is crucial since you don't want to destroy the pretrained knowledge on the first forward pass.</p>
 
         <p><strong>The scaling factor.</strong> The output is scaled by $\alpha / r$. This hyperparameter controls the magnitude of the LoRA update relative to the pretrained weights. The paper uses $\alpha = 16$ as a default and finds that the optimal $\alpha$ is roughly proportional to $r$, so keeping $\alpha / r$ constant when varying rank often works well.</p>
 
@@ -315,7 +315,7 @@ optimizer = torch.optim.AdamW(get_lora_parameters(model), lr=1e-4)</code></pre>
 
         <h2>Memory analysis: Where the savings come from</h2>
 
-        <p>Let's do a detailed memory breakdown. I'll use LLaMA-7B as an example—it has 32 layers, each with attention projections of size $(4096, 4096)$ and MLP layers.</p>
+        <p>Let's do a detailed memory breakdown. I'll use LLaMA-7B as an example. It has 32 layers, each with attention projections of size $(4096, 4096)$ and MLP layers.</p>
 
         <h3>Full fine-tuning memory</h3>
 
@@ -436,7 +436,7 @@ attention_and_mlp: 20.97M params (42.0 MB)</code></pre>
 
         <h2>Choosing the right rank</h2>
 
-        <p>Rank selection is the main hyperparameter in LoRA. The paper suggests that surprisingly low ranks work well—often $r = 4$ or $r = 8$ is sufficient.</p>
+        <p>Rank selection is the main hyperparameter in LoRA. The paper suggests that surprisingly low ranks work well. Often $r = 4$ or $r = 8$ is sufficient.</p>
 
         <p>Here's my mental model for thinking about rank:</p>
 
@@ -535,7 +535,7 @@ def load_lora_weights(model: nn.Module, path: str):
 
         <h2>Merging weights for deployment</h2>
 
-        <p>One of LoRA's nicest properties is that after training, you can merge the adaptation back into the base weights. This eliminates any inference overhead—you get a single model that runs at the same speed as the original.</p>
+        <p>One of LoRA's nicest properties is that after training, you can merge the adaptation back into the base weights. This eliminates any inference overhead. You get a single model that runs at the same speed as the original.</p>
 
 <pre><code class="language-python">def merge_lora_weights(model: nn.Module):
     """Merge all LoRA weights into base weights."""
@@ -648,17 +648,17 @@ All tests passed!</code></pre>
 
         <h2>Practical tips</h2>
 
-        <p>After using LoRA extensively, here are some lessons I've learned:</p>
+        <p>After personally using and reading about people's experiences using LoRA extensively, here are some lessons I've learned:</p>
 
-        <p><strong>1. Start with the defaults.</strong> $r = 8$, $\alpha = 16$, attention layers only. This works surprisingly well for most tasks. Only tune if you have a specific reason.</p>
+        <p><strong>1. Start with the defaults.</strong> $r = 8$, $\alpha = 16$, attention layers only. This works surprisingly well for most tasks.</p>
 
-        <p><strong>2. Learning rate matters more than rank.</strong> LoRA is sensitive to learning rate. If training is unstable, try lowering the LR before increasing rank.</p>
+        <p><strong>2. Learning rate matters more than rank.</strong> LoRA is sensitive to learning rate. If training is unstable, try lowering the learning rate before increasing rank.</p>
 
         <p><strong>3. Don't skip the warmup.</strong> Linear warmup for 5-10% of training steps helps, especially with larger ranks.</p>
 
         <p><strong>4. Monitor for overfitting.</strong> With so few parameters, overfitting can happen quickly on small datasets. Use validation loss to guide early stopping.</p>
 
-        <p><strong>5. The alpha/r ratio is what matters.</strong> If you double $r$, consider doubling $\alpha$ to maintain similar magnitude updates.</p>
+        <p><strong>5. The alpha/r ratio matters.</strong> If you double $r$, consider doubling $\alpha$ to maintain similar magnitude updates.</p>
 
         <p><strong>6. Consider target task complexity.</strong> Simple tasks (sentiment analysis, classification) work well with very low ranks. Complex tasks (instruction following, reasoning) may benefit from higher ranks.</p>
 
@@ -671,18 +671,14 @@ All tests passed!</code></pre>
           <li><strong>QLoRA</strong>: Combines 4-bit quantization with LoRA for extreme memory efficiency</li>
           <li><strong>LoRA+</strong>: Uses different learning rates for A and B matrices</li>
           <li><strong>AdaLoRA</strong>: Automatically learns the rank for each layer</li>
-          <li><strong>Orthogonal methods</strong>: Prefix tuning, prompt tuning, adapters—all complementary to LoRA</li>
+          <li><strong>Orthogonal methods</strong>: Prefix tuning, prompt tuning, adapters which are all complementary to LoRA. My MSc dissertation explored the complementary nature of parameter efficient finetuning methods extensively!</li>
         </ul>
 
         <p>These are all worth exploring, but vanilla LoRA remains a strong baseline and is the foundation they all build on.</p>
 
         <h2>Final thoughts</h2>
 
-        <p>LoRA is one of my favourite ideas in the LLM era. It's simple—you can explain the core concept in one sentence—yet it solves a real problem elegantly. The math works out beautifully, the implementation is straightforward, and it actually works in practice.</p>
-
-        <p>What I find most impressive is the insight that weight updates have low intrinsic rank. This isn't obvious! It suggests that fine-tuning is doing something much more constrained than we might naively assume. The pretrained weights already encode most of the knowledge; adaptation is a relatively simple adjustment in a low-dimensional subspace.</p>
-
-        <p>This has implications beyond just saving memory. If task adaptation really is low-rank, what does that tell us about what models are learning during fine-tuning? Are there even more efficient representations we haven't discovered yet?</p>
+        <p>LoRA is one of my favourite ideas in the LLM era. It's simple, you can explain the core concept in one sentence, yet it solves a real problem elegantly. The math works out beautifully, the implementation is straightforward, and it actually works in practice.</p>
 
         <p>For now, LoRA gives us a practical tool that makes fine-tuning accessible. You can adapt a 7B model on a single GPU, experiment rapidly, and ship small adapter files. That's a big deal for democratising LLM development.</p>
 
