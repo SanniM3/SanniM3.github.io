@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Building GPT-2 From Scratch: From Causal Self-Attention to KV-Cached Decoding | Mardhiyah Sanni</title>
+  <meta name="description" content="Building a GPT-2 decoder from scratch and adding a KV cache for efficient autoregressive decoding, tracking every tensor shape along the way">
+  
+  <link rel="shortcut icon" href="../assets/images/favicon.ico" type="image/x-icon">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="../assets/css/main.css">
+  
+  <!-- Code Highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  
+  <!-- MathJax -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  
+  <!-- Theme Initialization -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>
+<body>
+  <div class="blog-wrapper">
+    <div class="reading-progress" id="reading-progress"></div>
+    
+    <nav class="blog-nav">
+      <div class="blog-nav-inner">
+        <a href="../index.html" class="blog-back-link">
+          <ion-icon name="arrow-back"></ion-icon>
+          <span>Back to Home</span>
+        </a>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+          <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </nav>
+    
+    <article class="blog-article">
+      <header class="blog-header">
+        <span class="blog-header-category">LLM Fundamentals</span>
+        <span class="blog-header-category">Paper Reimplementation</span>
+        <h1 class="blog-header-title">Building GPT-2 From Scratch: From Causal Self-Attention to KV-Cached Decoding</h1>
+        <div class="blog-header-meta">
+          <div class="blog-header-meta-item">
+            <ion-icon name="time-outline"></ion-icon>
+            <span>17 min read</span>
+          </div>
+        </div>
+      </header>
+      
+      <div class="blog-content">
+
+        <p>I recently read Sebastian Raschka's <a href="https://magazine.sebastianraschka.com/p/coding-the-kv-cache-in-llms">article on understanding and implementing KV cache in LLMs</a>. It made for a very good resource for understanding the idea, and I decided to implement the same idea in a GPT-2 implementation, and provide additional breakdowns that helped me fully understand it. This post is essentially me penning down my understanding, with an arguably excessive emphasis on dimensions, until every tensor operation made sense to me.</p>
+
+        <p>Suppose an LLM is prompted with:</p>
+
+<pre><code class="language-text">The cat sat on</code></pre>
+
+        <p>We pass the entire sequence through the model and predict the next token. A short refresher on how attention works in the model: we compute the key, value and query vectors for each of the tokens in the sequence, then compute the attention score (i.e. how relevant is the key vector to the query), normalize scores to a probability distribution (attention weights), and use these weights to compute a weighted sum of value vectors in order to get the context vectors (i.e. a representation that holds the combined information gathered from all relevant value vectors).</p>
+
+        <div class="math-display">
+          $$\text{Attention}(Q, K, V) = \text{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right)V$$
+        </div>
+
+        <p>Now, say the model predicts <code>the</code>. So far, nothing unusual. But to predict the token after <code>the</code>, the standard generation implementation passes this new entire text <code>the cat sat on the</code> through the model again. That means recomputing the query, key and value vectors for each of <code>The</code>, <code>cat</code>, <code>sat</code>, and <code>on</code>, even though we computed exactly the same vectors one generation step ago.</p>
+
+        <p>Generate another token and we do it again.</p>
+
+        <p>And again.</p>
+
+        <p>The longer the sequence becomes, the more time we spend recomputing representations for tokens whose representations have not changed. This is the problem the <strong>KV cache</strong> solves.</p>
+
+        <p>But KV caching is easier to understand once the underlying model is completely transparent. So in this article, I'll build a GPT-2-style decoder-only Transformer from scratch in PyTorch, starting with embeddings and multi-head causal self-attention, before modifying the attention mechanism to cache its keys and values during autoregressive generation.</p>
+
+        <p>More importantly, I'll keep track of the tensor shapes throughout. Most of the apparent complexity in attention disappears once it is clear which dimension represents tokens, which represents attention heads, and exactly which matrices are being multiplied.</p>
+
+        <p>By the end, the difference between standard generation and KV-cached generation should reduce to one fairly simple idea:</p>
+
+<pre><code class="language-text">Without KV cache:
+recompute the past + compute the new token
+
+With KV cache:
+remember the past + compute only the new token</code></pre>
+
+        <p>The rest is implementation detail.</p>
+
+        <h2>The model we are building</h2>
+
+        <p>I'll use approximately the configuration of the 124M-parameter GPT-2 model:</p>
+
+<pre><code class="language-python">cfg = {
+    "vocab_size": 50257,
+    "context_length": 1024,
+    "emb_dim": 768,
+    "n_heads": 12,
+    "n_layers": 12,
+    "drop_rate": 0.1,
+    "qkv_bias": False
+}</code></pre>
+
+        <p>At a high level, the architecture is:</p>
+
+<pre><code class="language-text">token IDs
+   ↓
+token embeddings + positional embeddings
+   ↓
+12 × Transformer blocks
+   ↓
+final layer normalization
+   ↓
+linear vocabulary projection
+   ↓
+Logits (distribution over the vocabulary)</code></pre>
+
+        <p>With each Transformer block containing two large pieces, <code>Multi-Head Causal Self-Attention</code> and <code>Feed-Forward Network</code>, with layer normalization and residual connections around them.</p>
+
+        <h2>Turning token IDs into representations</h2>
+
+        <p>From the earlier high-level architecture, we note that the transformer does not receive text directly. The tokenizer first maps text into integer vocabulary IDs.</p>
+
+        <p>For example:</p>
+
+<pre><code class="language-text">"The cat sat on"
+
+        ↓ tokenizer
+
+[token_0, token_1, token_2, token_3]</code></pre>
+
+        <p>If the batch contains <code>b</code> samples/sequences and every sample or sequence contains <code>num_tokens</code> tokens, the input tensor generally has shape:</p>
+
+<pre><code class="language-text">(b, num_tokens)</code></pre>
+
+        <p>GPT-2 then uses an embedding table, that essentially works as a lookup table to convert token IDs to their corresponding embedding vectors:</p>
+
+<pre><code class="language-python">tok_emb = nn.Embedding(cfg["vocab_size"],cfg["emb_dim"])</code></pre>
+
+        <p>With an embedding dimension of 768, an input tensor of shape (b, num_tokens) becomes (b, num_tokens, 768), because every integer vocabulary ID has become a 768-dimensional vector.</p>
+
+        <p>But there is a problem.</p>
+
+        <p>Attention itself has no inherent notion of token order. If we gave the model the same set of tokens in a different order, the token embedding alone would not tell which token appeared first, second and so on. GPT-2 incorporated this positional information using a second learnable embedding table. Instead of mapping a token_id to a vector (like we did in the token embedding layer), this table maps each possible position in the sequence to its own vector of size <code>emb_dim = 768</code>. Since the model can process at most <code>context_length</code> tokens, there are <code>context_length</code> possible positional embeddings.</p>
+
+<pre><code class="language-python">pos_emb = nn.Embedding(cfg["context_length"],cfg["emb_dim"])</code></pre>
+
+        <p>For a four-token sequence, the positions are:</p>
+
+<pre><code class="language-text">0, 1, 2, 3</code></pre>
+
+        <p>and each position is mapped to its own 768-dimensional vector.</p>
+
+        <p>Adding the token embeddings and the positional embedding together, we have a new representation that is still of dimension (b, num_tokens, 768):</p>
+
+<pre><code class="language-python">x = tok_embeds + pos_embeds</code></pre>
+
+        <p>We can think of this as giving every token two pieces of information:</p>
+
+<pre><code class="language-text">token embedding       → what am I?
+positional embedding  → where am I?</code></pre>
+
+        <p>Both will become important later. In particular, the positional embedding becomes slightly tricky once KV caching means the model no longer receives the entire sequence during every decoding step.</p>
+
+        <h2>Attention</h2>
+
+        <p>The attention layer begins with three learned linear projections:</p>
+
+<pre><code class="language-python">W_query = nn.Linear(d_in, d_out, bias=qkv_bias)
+W_key   = nn.Linear(d_in, d_out, bias=qkv_bias)
+W_value = nn.Linear(d_in, d_out, bias=qkv_bias)</code></pre>
+
+        <p>Given:</p>
+
+<pre><code class="language-text">x: (b, num_tokens, 768)</code></pre>
+
+        <p>we compute:</p>
+
+<pre><code class="language-python">queries = W_query(x)
+keys    = W_key(x)
+values  = W_value(x)</code></pre>
+
+        <p>which gives:</p>
+
+<pre><code class="language-text">Q: (b, num_tokens, 768)
+K: (b, num_tokens, 768)
+V: (b, num_tokens, 768)</code></pre>
+
+        <p>The easiest intuition I have for these three representations is:</p>
+
+<pre><code class="language-text">Query → what information am I looking for?
+Key   → what information do I contain?
+Value → what information should I contribute if selected?</code></pre>
+
+        <p>Attention first compares queries with keys. It then uses those comparisons to decide how strongly to combine the values. Note this distinction as it becomes important when we eventually ask why a <strong>KV</strong> cache stores keys and values but does not bother caching queries.</p>
+
+        <p>This model uses twelve attention heads. Since <code>embedding dimension = 768</code> and <code>number of heads = 12</code>, each head receives <code>768/12 = 64</code> dimensional vectors. We refer to this smaller dimension as the <code>head_dimension</code>. Therefore, we can reshape our <code>(b, num_tokens, emb_dim)</code> dimensional queries, keys and values by "splitting" the last <code>emb_dim</code> into a product of <code>num_heads</code> and <code>head_dim</code>. The resulting dimension would change from (b, num_tokens, 768) to (b, num_tokens, 12, 64).</p>
+
+<pre><code class="language-python">queries = queries.view(b, num_tokens, num_heads, head_dim)
+keys = keys.view(b, num_tokens, num_heads, head_dim)
+values = values.view(b, num_tokens, num_heads, head_dim)</code></pre>
+
+        <p>Note that we have not thrown information away. We have simply interpreted the 768 features as twelve groups of 64 features.</p>
+
+        <p>For the attention calculation, it is more convenient to place the head dimension before the token dimension. Here, we are not <strong>regrouping</strong> the tensor elements, rather, we are <strong>swapping</strong> the token and head axes so the tensor changes from <code>(b, num_tokens, num_heads, head_dim)</code> to <code>(b, num_heads, num_tokens, head_dim)</code>.</p>
+
+<pre><code class="language-python">queries = queries.transpose(1, 2)
+keys    = keys.transpose(1, 2)
+values  = values.transpose(1, 2)</code></pre>
+
+        <p>Now that we have the queries, keys and values matrices computed, we can compute the attention scores. Like we said earlier, attention scores show how relevant the keys are to a query. And this relevance is computed with a query-key comparison represented as a dot product between the two. Think of similarity measurement with a dot product.</p>
+
+<pre><code class="language-python">scores = queries @ keys.transpose(2, 3)</code></pre>
+
+        <p>Before the multiplication, queries and keys are (b, num_heads, num_tokens, head_dim)-dimensional matrices. For each attention head, we want to compute the dot product between every query and every key. To make the inner dimensions compatible for matrix multiplication, we transpose the last two dimension of the keys from <code>(b, num_heads, num_tokens, head_dim)</code> to <code>(b, num_heads, head_dim, num_tokens)</code>. The resulting attention score tensor therefore has shape <code>(b, num_heads, num_tokens, num_tokens)</code>. </p>
+
+        <details class="sidenote">
+          <summary>Sidenote: matrix multiplication is just multiple dot products</summary>
+          <div class="sidenote-body">
+
+            <p>It may be useful to pause here and see why this matrix multiplication gives us the attention scores.</p>
+
+            <p>Suppose we have three query vectors and three key vectors, with each vector containing two features:</p>
+
+            <div class="math-display">
+              $$Q = \begin{bmatrix} q_{11} & q_{12} \\ q_{21} & q_{22} \\ q_{31} & q_{32} \end{bmatrix}$$
+            </div>
+
+            <p>and:</p>
+
+            <div class="math-display">
+              $$K = \begin{bmatrix} k_{11} & k_{12} \\ k_{21} & k_{22} \\ k_{31} & k_{32} \end{bmatrix}$$
+            </div>
+
+            <p>Each <strong>row</strong> of \(Q\) is one query vector, and each row of \(K\) is one key vector.</p>
+
+            <p>Since we want to compare every query against every key, we transpose \(K\):</p>
+
+            <div class="math-display">
+              $$K^\top = \begin{bmatrix} k_{11} & k_{21} & k_{31} \\ k_{12} & k_{22} & k_{32} \end{bmatrix}$$
+            </div>
+
+            <p>Now we can multiply:</p>
+
+            <div class="math-display">
+              $$QK^\top = \begin{bmatrix} q_{11} & q_{12} \\ q_{21} & q_{22} \\ q_{31} & q_{32} \end{bmatrix} \begin{bmatrix} k_{11} & k_{21} & k_{31} \\ k_{12} & k_{22} & k_{32} \end{bmatrix}$$
+            </div>
+
+            <p>Expanding the multiplication gives:</p>
+
+            <div class="math-display">
+              $$\begin{bmatrix} q_{11}k_{11}+q_{12}k_{12} & q_{11}k_{21}+q_{12}k_{22} & q_{11}k_{31}+q_{12}k_{32} \\ q_{21}k_{11}+q_{22}k_{12} & q_{21}k_{21}+q_{22}k_{22} & q_{21}k_{31}+q_{22}k_{32} \\ q_{31}k_{11}+q_{32}k_{12} & q_{31}k_{21}+q_{32}k_{22} & q_{31}k_{31}+q_{32}k_{32} \end{bmatrix}$$
+            </div>
+
+            <p>But each entry here is simply a dot product. For example:</p>
+
+            <div class="math-display">
+              $$q_2 \cdot k_1 = q_{21}k_{11} + q_{22}k_{12}$$
+            </div>
+
+            <p>So we can think of the resulting matrix as:</p>
+
+            <div class="math-display">
+              $$QK^\top = \begin{bmatrix} q_1 \cdot k_1 & q_1 \cdot k_2 & q_1 \cdot k_3 \\ q_2 \cdot k_1 & q_2 \cdot k_2 & q_2 \cdot k_3 \\ q_3 \cdot k_1 & q_3 \cdot k_2 & q_3 \cdot k_3 \end{bmatrix}$$
+            </div>
+
+            <p>Matrix multiplication is essentially allowing us to compute <strong>all query-key dot products at once</strong>, rather than looping through every query and key pair individually.</p>
+
+          </div>
+        </details>
+
+        <p>You can think of this comparison as shown below. For one head and four tokens, this is essentially:</p>
+
+<pre><code class="language-text">        K0   K1   K2   K3
+Q0      •    •    •    •
+Q1      •    •    •    •
+Q2      •    •    •    •
+Q3      •    •    •    •</code></pre>
+
+        <p>Every row belongs to a query. Every column belongs to a key. And every cell is one query-key dot product. This is also where the characteristic cost of attention comes from: for <code>num_tokens</code> tokens, we create roughly <code>num_tokens × num_tokens</code> query-key comparisons.</p>
+
+        <p>However, we would ideally not want our model to have access to future tokens when computing the representation of the current token, since during generation, those future tokens have not been generated yet. Hence the need for something we refer to as causal attention.</p>
+
+        <h2>Making attention causal</h2>
+
+        <p>GPT's generation is autoregressive. This means it generates one token at a time, then uses the generated token as part of the context for generating the next token. Therefore, when computing the context vector for token at position 2, the model should not be able to obtain information from positions 3, 4, 5 and so on. Otherwise training becomes rather pointless: the model could simply look into the future.</p>
+
+        <p>To prevent this, we create a causal mask that we would later use to "cover" the portions of the attention score matrix corresponding to future tokens. Since this mask needs to be able to move to the same device as the rest of the model, we register it as a buffer. That is PyTorch's way of registering a tensor that belongs to the module but is not a learnable parameter.</p>
+        <p>The mask is initialized with shape <code>(context_length, context_length)</code>, which is the largest attention score matrix the model can produce since <code>context_length</code> is the maximum sequence length the model supports. The 1s mark query-key comparisons that should NOT be considered, while the 0s mark valid comparisons.</p>
+        
+<pre><code class="language-python">register_buffer(
+    "mask",
+    torch.triu(
+        torch.ones(context_length, context_length),
+        diagonal=1
+    )
+)</code></pre>
+
+        <p>For five tokens:</p>
+
+<pre><code class="language-text">        K0 K1 K2 K3 K4
+
+Q0      0  1  1  1  1
+Q1      0  0  1  1  1
+Q2      0  0  0  1  1
+Q3      0  0  0  0  1
+Q4      0  0  0  0  0</code></pre>
+
+        <p>The zeros are the comparisons we consider valid. The ones represent future positions. For <code>Q2</code>, therefore, the only valid comparisons are:</p>
+
+<pre><code class="language-text">Q2 ↔ K0
+Q2 ↔ K1
+Q2 ↔ K2</code></pre>
+
+        <p>The future does not exist yet. At least as far as the model is concerned.</p>
+
+        <p>During computation, we take a slice of mask that corresponds to the size of our actual query-key comparison, which in the standard case would be of shape <code>(num_tokens, num_tokens)</code>. We then replace the attention scores corresponding to future positions (i.e. where the mask entry = 1) with negative infinity because the softmax (which would later apply to get attention weights) of negative infinity is zero, essentially zeroing out regions we do not want to consider at that step. We also scale the values of the attention scores by the square root of the dimension of the keys, <code>head_dim</code>, before applying softmax. </p>
+        
+        
+
+<pre><code class="language-python">scores.masked_fill_(mask.bool()[:num_tokens, :num_tokens], -torch.inf)
+scaled_scores = scores / (keys.shape[-1] ** 0.5)</code></pre>
+
+        <p>This gives us the attention weights, which have the same shape as the attention scores, <code>(b, num_heads, num_tokens, num_tokens)</code>. The context vectors, which I explained earlier are weighted sums of the value vectors, can be computed at once with matrix multiplication. The attention weights have dimension (b, num_heads, num_tokens, num_tokens), while the values have shape (b, num_heads, num_tokens, head_dim). Multiplying them gives context vectors of shape (b, num_heads, num_tokens, head_dim).</p>
+        
+<pre><code class="language-python">weights = torch.softmax(scaled_scores, dim=-1)
+weights = dropout(weights)
+context_vectors = weights @ values</code></pre>
+
+        <p>After doing this independently for all heads, we transpose the result and merge (num_heads, head_dim) back to <code>emb_dim</code>:</p>
+
+<pre><code class="language-python">context_vectors = context_vectors.transpose(1, 2)  # (b, num_tokens, num_heads, head_dim)
+context_vectors = context_vectors.contiguous().view(b, num_tokens, -1)</code></pre>
+
+        <p>So far this is ordinary multi-head causal self-attention. Now we can get to the "wasteful" part.</p>
+
+        <h2>Standard autoregressive generation keeps recomputing the past</h2>
+
+        <p>Imagine our tokenized prompt is:</p>
+
+<pre><code class="language-text">A B C D</code></pre>
+
+        <p>The model processes all four tokens, during which it calculates:</p>
+
+<pre><code class="language-text">Q_A Q_B Q_C Q_D
+K_A K_B K_C K_D
+V_A V_B V_C V_D</code></pre>
+
+        <p>This stage where the model processes the prompt is commonly referred to as the <strong>prefill</strong> stage. Assume it then predicts <code>E</code>. Now, to predict the token after <code>E</code>, a standard generation loop now sends:</p>
+
+<pre><code class="language-text">A B C D E</code></pre>
+
+        <p>through the model. The attention layer calculates:</p>
+
+<pre><code class="language-text">Q_A Q_B Q_C Q_D Q_E
+K_A K_B K_C K_D K_E
+V_A V_B V_C V_D V_E</code></pre>
+
+        <p>But there is nothing new about:</p>
+
+<pre><code class="language-text">K_A K_B K_C K_D
+V_A V_B V_C V_D</code></pre>
+
+        <p>We literally calculated them during the previous forward pass. Say this then generates another token, <code>F</code>; the model calculates them again, and so on.</p>
+
+        <p>This is where KV caching enters.</p>
+
+        <h2>The KV cache: remember what cannot change</h2>
+
+        <p>Previous tokens do not change during autoregressive generation. And because the transformer's weights are fixed during inference, the keys and values already computed for those previous tokens do not change either.</p>
+
+        <p>So rather than recomputing them, we store them:</p>
+
+<pre><code class="language-python">register_buffer("cache_k", None,persistent=False)
+register_buffer("cache_v", None, persistent=False)</code></pre>
+
+        <p>Similar to the mask we created earlier, <code>register_buffer</code> tells PyTorch that these tensors belong to the module and should, for example, move with it between CPU and GPU whenever the model moves devices. The persistent parameter here just tells PyTorch not to include this tensor in the model's state_dict. We set this to False because the KV cache is a temporary inference state, belonging to the prompt currently being generated for, and not to the learned model itself.</p>
+
+        <h2>Why K and V, but not Q?</h2>
+
+        <p>If K and V are worth caching, why isn't Q? The answer becomes obvious if we look at what the next decoding step actually needs.</p>
+
+        <p>Suppose the sequence is now:</p>
+
+<pre><code class="language-text">A B C D E</code></pre>
+
+        <p>and <code>E</code> is the newest token.</p>
+
+        <p>To calculate the context vector for <code>E</code>, we need:</p>
+
+<pre><code class="language-text">Q_E</code></pre>
+
+        <p>to compare against:</p>
+
+<pre><code class="language-text">K_A K_B K_C K_D K_E</code></pre>
+
+        <p>So the score computation is:</p>
+
+<pre><code class="language-text">Q_E @ [K_A K_B K_C K_D K_E]ᵀ</code></pre>
+
+        <p>What would we do with:</p>
+
+<pre><code class="language-text">Q_A Q_B Q_C Q_D</code></pre>
+
+        <p>at this point?</p>
+
+        <p>Nothing.</p>
+
+        <p>We already calculated the context vectors for those token positions when they were processed (i.e. in the prefill stage). Keys and values are different. Future tokens may still need to attend to every one of them. This stage where we generate additional tokens after the initial one in the prefill stage is referred to as decoding.</p>
+
+        <p>So during decoding:</p>
+
+<pre><code class="language-text">Q → compute only the newest one
+
+K → reuse old ones + compute newest one
+
+V → reuse old ones + compute newest one</code></pre>
+
+        <p>That is why it is a KV cache rather than a QKV cache.</p>
+
+        <h2>Prefill and decoding are two different phases</h2>
+
+        <p>This distinction makes the implementation much easier to reason about.</p>
+
+        <p>Suppose the prompt contains four tokens:</p>
+
+<pre><code class="language-text">A B C D</code></pre>
+
+        <p>The first time the model sees this prompt, there is nothing in the cache. We therefore send all four tokens through the model. This is the <strong>prefill</strong> stage.</p>
+
+        <p>The attention layer calculates:</p>
+
+<pre><code class="language-text">Q_A Q_B Q_C Q_D
+K_A K_B K_C K_D
+V_A V_B V_C V_D</code></pre>
+
+        <p>and because:</p>
+
+<pre><code class="language-python">cache_k is None  # i.e. empty</code></pre>
+
+        <p>we initialize the cache with the computed keys and values:</p>
+
+<pre><code class="language-python">cache_k = keys
+cache_v = values</code></pre>
+
+        <p>So after prefill:</p>
+
+<pre><code class="language-text">cache K:
+K_A K_B K_C K_D
+
+cache V:
+V_A V_B V_C V_D</code></pre>
+
+        <p>Now suppose the model predicts <code>E</code>. This begins the <strong>decoding</strong> stage. Instead of passing:</p>
+
+<pre><code class="language-text">A B C D E</code></pre>
+
+        <p>back into the model (like we would have done in the standard attention), we pass only <code>E</code>. Therefore:</p>
+
+<pre><code class="language-text">num_tokens = 1</code></pre>
+
+        <p>and we calculate only:</p>
+
+<pre><code class="language-text">Q_E
+K_E
+V_E</code></pre>
+
+        <p>The new key and value are appended to their respective caches:</p>
+
+<pre><code class="language-python">cache_k = torch.concat((cache_k, keys), dim=2)
+cache_v = torch.concat((cache_v, values), dim=2)</code></pre>
+
+        <details class="sidenote">
+          <summary>Why dim=2?</summary>
+          <div class="sidenote-body">
+            <p>Because my cached layout is of dimension <code>(B, num_heads, num_tokens, head_dim)</code> (see key and value dimension just before score computation above) and therefore the token axis is dimension 2.</p>
+          </div>
+        </details>
+
+        <p>So:</p>
+
+        <div class="concat-flow">
+          <div class="concat-inputs">
+            <code>old cache: (B, num_heads, 4, head_dim)</code>
+            <code>new key: (B, num_heads, 1, head_dim)</code>
+          </div>
+          <span class="concat-brace" aria-hidden="true">}</span>
+          <span class="concat-arrow"><span class="concat-arrow-text">concatenate</span></span>
+          <code class="concat-result">New cache: (B, num_heads, 5, head_dim)</code>
+        </div>
+
+        <p>The attention calculation then uses:</p>
+
+<pre><code class="language-text">query:
+Q_E
+
+keys:
+K_A K_B K_C K_D K_E</code></pre>
+
+        <p>That is the entire trick!</p>
+
+        <h2>Where the actual computation is saved</h2>
+
+        <p>The difference becomes obvious if we write down the score matrices. Without caching, at sequence length <code>num_tokens</code>:</p>
+
+<pre><code class="language-text">Q: (num_tokens, emb_dim)
+K: (num_tokens, emb_dim)
+
+QKᵀ → (num_tokens, num_tokens)</code></pre>
+
+        <p>We recompute the complete attention matrix:</p>
+
+<pre><code class="language-text">          Keys
+       K0 K1 K2 K3 K4
+
+Q0      ×
+Q1      ×  ×
+Q2      ×  ×  ×
+Q3      ×  ×  ×  ×
+Q4      ×  ×  ×  ×  ×</code></pre>
+
+        <p>With KV-cached one-token decoding:</p>
+
+<pre><code class="language-text">Q_new:   (1, emb_dim)
+K_cache: (num_tokens, emb_dim)
+
+Q_new K_cacheᵀ → (1, num_tokens)</code></pre>
+
+        <p>We calculate only:</p>
+
+<pre><code class="language-text">          Keys
+       K0 K1 K2 K3 K4
+
+Q4      ×  ×  ×  ×  ×</code></pre>
+
+        <p>One row. The same reduction happens when producing the context vector. Without the cache:</p>
+
+<pre><code class="language-text">context_vector = (num_tokens, num_tokens) @ (num_tokens, emb_dim)</code></pre>
+
+        <p>With cached decoding:</p>
+
+<pre><code class="language-text">context_vector = (1, num_tokens) @ (num_tokens, emb_dim)</code></pre>
+
+        <p>So, an intuitive way of thinking about the saving is that during decoding we have gone from repeatedly multiplying large matrices for every old query to computing essentially a <strong>vector against a matrix</strong> for the newest query.</p>
+
+        <p>But that is not the only saving.</p>
+
+        <p>We also stopped recalculating all of the previous keys and values in the first place. The cache saves both pieces of work.</p>
+
+        <h2>The causal mask becomes strangely simple during decoding</h2>
+
+        <p>There is one slightly awkward consequence of sending only the newest token through the model.</p>
+
+        <p>Suppose prefill processed:</p>
+
+<pre><code class="language-text">A B C D</code></pre>
+
+        <p>and the next token is position 4.</p>
+
+        <p>During decoding:</p>
+
+<pre><code class="language-text">queries:
+Q4
+
+keys:
+K0 K1 K2 K3 K4</code></pre>
+
+        <p>There is only one query in the current tensor, but it is <strong>not query position zero</strong>.</p>
+
+        <p>If we blindly took:</p>
+
+<pre><code class="language-python">mask[:1, :5]</code></pre>
+
+        <p>we would select:</p>
+
+<pre><code class="language-text">        K0 K1 K2 K3 K4
+
+Q0      0  1  1  1  1</code></pre>
+
+        <p>which is completely wrong. Our current query is <code>Q4</code>. So we can keep track of its absolute starting position:</p>
+
+<pre><code class="language-python">ptr_current_pos = 0</code></pre>
+
+        <p>And during the four-token prefill:</p>
+
+<pre><code class="language-text">ptr_current_pos = 0
+num_queries     = 4</code></pre>
+
+        <p>we select mask rows:</p>
+
+<pre><code class="language-text">0:4</code></pre>
+
+        <p>and then move the pointer:</p>
+
+<pre><code class="language-text">0 → 4</code></pre>
+
+        <p>The next forward pass contains <code>Q4</code>, so we select:</p>
+
+<pre><code class="language-text">4:(4+1), where 1 is the number of tokens in the new query. Note that is usually 1 for one-token-at-a-time decoding.</code></pre>
+
+        <p>Then the pointer is moved:</p>
+
+<pre><code class="language-text">4 → 5</code></pre>
+
+        <p>and so on.</p>
+
+        <p>Interestingly, during standard one-token-at-a-time decoding, this selected mask row is always all zeros.</p>
+
+        <p>For <code>Q4</code>:</p>
+
+<pre><code class="language-text">        K0 K1 K2 K3 K4
+
+Q4      0  0  0  0  0</code></pre>
+
+        <p>Of course it is. Every key currently in the cache belongs either to a previous token or to the current token. There are no future keys in existence yet. This means the causal mask is technically doing no useful filtering during ordinary single-token decoding. I still keep the general logic because it also works if multiple new uncached tokens are processed together.</p>
+
+        <h2>Positional embeddings have the same problem</h2>
+
+        <p>There is another place where sending only one token causes trouble.</p>
+
+        <p>Without caching, a five-token input naturally gets positions:</p>
+
+<pre><code class="language-text">0 1 2 3 4</code></pre>
+
+        <p>But during cached decoding, token 4 arrives as a tensor of sequence length one.</p>
+
+        <p>If we wrote:</p>
+
+<pre><code class="language-python">torch.arange(seq_len)</code></pre>
+
+        <p>we would assign it position:</p>
+
+<pre><code class="language-text">0</code></pre>
+
+        <p>which is wrong. So we instead track the starting positions like we did earlier with the mask:</p>
+
+<pre><code class="language-python">pos_current = 0</code></pre>
+
+        <p>During four-token prefill:</p>
+
+<pre><code class="language-text">positions:
+0 1 2 3
+
+pos_current:
+0 → 4</code></pre>
+
+        <p>The next token then receives:</p>
+
+<pre><code class="language-text">position = 4</code></pre>
+
+        <p>and advances the pointer:</p>
+
+<pre><code class="language-text">4 → 5</code></pre>
+
+        <p>There are therefore two similar-looking counters in the implementation: <code>ptr_current_pos</code> tracks which causal-mask rows belong to the current queries, while <code>pos_current</code> tracks which positional embeddings belong to the current tokens. They move together during normal generation, but they solve two different problems.</p>
+
+        <p>It is important to note that the cache belongs to the current generation. When a the model is prompted anew, all of it must be discarded.</p>
+
+<pre><code class="language-python">def reset_cache():
+    cache_k, cache_v = None, None
+    # return query start position back to 0
+    ptr_current_pos = 0</code></pre>
+
+        <h2>Every Transformer layer needs its own cache</h2>
+
+        <p>One final point that is easy to miss: there is not one KV cache for the entire GPT model.</p>
+
+        <p>Each Transformer layer has different learned W_query, W_key and W_value matrices. So token <code>A</code> does not have one universal key vector. It has a different key representation at every layer.</p>
+
+        <p>With twelve Transformer blocks, conceptually we therefore store:</p>
+
+<pre><code class="language-text">Layer 1:  K cache + V cache
+Layer 2:  K cache + V cache
+Layer 3:  K cache + V cache
+...
+Layer 12: K cache + V cache</code></pre>
+
+        <p>So, when a completely new prompt arrives, we must discard the caches of all layers and reset all position trackers to 0.</p>
+
+<pre><code class="language-python">def reset_kv_cache():
+    for block in trf_block:
+        block.mha.reset_cache()
+
+    pos_current = 0</code></pre>
+
+        <h2>Putting cached generation together</h2>
+
+        <p>The final generation loop has the two phases we discussed earlier: prefill and decoding. But before we start anything, we must make sure all caches are empty and all position trackers are set to 0.</p>
+
+<pre><code class="language-python">model.reset_kv_cache()
+
+# PREFILL
+out = model(prompt, use_cache=True)
+next_token = select_next_token(out)
+
+# DECODING
+for _ in range(max_new_tokens - 1):  # minus 1 because we already generated one token in prefill
+    out = model(next_token, use_cache=True)
+    next_token = select_next_token(out)</code></pre>
+
+        <p>Note that we must still separately maintain the complete output sequence, as this is what we eventually want to return and decode into text.</p>
+
+<pre><code class="language-text">A B C D E F G ...</code></pre>
+
+        <p>But the model itself does not need that complete tensor on every decode step. Its next forward pass might receive only:</p>
+
+<pre><code class="language-text">G</code></pre>
+
+        <p>with the caches containing the already encoded key and value representations of the preceding tokens.</p>
+
+<pre><code class="language-text">K_A ... K_F
+V_A ... V_F</code></pre>
+
+        
+
+        <p>So there are really two sequences involved in generation:</p>
+
+<pre><code class="language-text">Complete generated sequence:
+A B C D E F G
+
+Input to next cached forward pass:
+G</code></pre>
+
+        <p>Confusing those two is probably the easiest way to make a KV-cache implementation go wrong.</p>
+
+        <h2>The cost of decoding still grows as the KV cache grows</h2>
+
+        <p>KV caching removes a lot of repeated computations, but it does not make the cost of generating each new token constant.</p>
+
+        <p>Suppose we have already processed 1,000 tokens. During the next decoding step, we only compute the query, key, and value vecotrs for the new token. However, the new query still needs to be compared against all 1,001 keys currently in the cache.</p>
+        
+<pre><code class="language-text">Q_new @ K_cacheᵀ</code></pre>
+
+        <p>If the cache contains 100 tokens, the new query is compared against roughly 100 keys. If it contains 1,000 tokens, it is compared againsts roughly 1,000 keys, and so on.  The same applies to computing the context vector, the attention weights for the new query must be applied across all the caches value vectors.</p>
+
+
+        <p>So, as the sequence gets longer, there are more cached keys to compare against and more cached values to combine.</p>
+
+        <p>What it removes is the repetitive part: recomputing the attention outputs and K/V projections for all 1,000 old tokens just to generate token 1,001.</p>
+
+        <p>In other words:</p>
+
+<pre><code class="language-text">No KV cache:
+reconstruct the history every step.
+
+KV cache:
+carry the history forward.</code></pre>
+
+        <p>That speed comes at the cost of memory. For every token, every layer needs to retain a key and a value representation. The cache therefore grows with sequence length, batch size and model depth. This is why KV caching solves one inference bottleneck and immediately creates another one: <strong>memory</strong>.</p>
+
+        <p>And that leads naturally to techniques such as Multi-Query Attention, Grouped-Query Attention and PagedAttention, whose job is essentially to make this increasingly enormous cache more manageable.</p>
+
+        <p>But before worrying about those optimizations, the important thing is understanding what the cache actually contains. It is not storing tokens. It is not storing attention scores. It is not storing context vectors. It is storing the <strong>keys and values that future queries will need again</strong>.</p>
+
+        <p>KV caching is simply autoregressive attention remembering its past. See here <a href="https://github.com/SanniM3/build_llm_from_scratch/blob/main/gpt2_kv_cache.py"> for the entire code</a></p>
+
+        <h2>References</h2>
+
+        <ul>
+          <li>Sebastian Raschka, <a href="https://magazine.sebastianraschka.com/p/coding-the-kv-cache-in-llms"><em>Understanding and Coding the KV Cache in LLMs from Scratch</em></a>, Ahead of AI.</li>
+        </ul>
+
+      </div>
+      
+      <footer class="blog-footer">
+        <a href="../index.html#blog" class="blog-footer-link">
+          <ion-icon name="arrow-back"></ion-icon>
+          <span>Back to all posts</span>
+        </a>
+      </footer>
+    </article>
+    
+    <!-- Site Footer -->
+    <footer class="site-footer">
+      <div class="site-footer-content">
+        <p class="copyright">© 2026 Mardhiyah Sanni</p>
+        <p class="ai-disclosure">Some content created in collaboration with generative AI.</p>
+      </div>
+    </footer>
+  </div>
+  
+  <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+  
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    }
+    
+    window.addEventListener('scroll', () => {
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const scrolled = (window.scrollY / docHeight) * 100;
+      document.getElementById('reading-progress').style.width = scrolled + '%';
+    });
+    
+    document.addEventListener('DOMContentLoaded', () => { hljs.highlightAll(); });
+  </script>
+  
+  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+</body>
+</html>
